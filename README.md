@@ -35,6 +35,23 @@ AWX/Ansible project to manage R1Soft Server Backup Manager (SBM) users across ma
 5. For each Job Template, click **Add Survey** → **Import** and choose the matching file from `awx/surveys/` (`create_user.survey.json` or `disable_user.survey.json`). Save.
 6. Set **Prompt on launch** for credentials to avoid storing secrets in SCM, then launch.
 
+## Validating the playbooks before AWX
+
+Run these checks locally (or in CI) to confirm everything needed is present and the playbooks parse correctly:
+
+```bash
+# Verify required files exist and run syntax checks when ansible-playbook is available
+make self-test
+
+# Or run syntax checks directly
+make syntax-all
+
+# Render the inventory graph to confirm the sbms group is present
+make inventory-graph
+```
+
+If `ansible-playbook` is not installed, `make self-test` will still confirm that all expected repo files are present and report missing items.
+
 ## How it works
 
 * The role copies a small PHP **wrapper** that sets variables, then includes the official vendor sample script located on the SBM host. This keeps logic vendor-validated while letting us pass parameters safely.
