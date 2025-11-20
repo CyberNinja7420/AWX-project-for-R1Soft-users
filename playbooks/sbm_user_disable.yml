@@ -1,0 +1,12 @@
+- name: Disable SBM Power-User (vendor sample + wrapper)
+  hosts: sbms
+  gather_facts: false
+  vars:
+    ansible_become: true
+  roles:
+    - role: sbm_api_samples
+      tasks_from: verify_samples.yml
+  tasks:
+    - include_role:
+        name: sbm_api_samples
+        tasks_from: disable_power_user.yml

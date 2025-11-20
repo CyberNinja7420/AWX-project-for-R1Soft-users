@@ -1,0 +1,16 @@
+- name: Deploy wrapper to include vendor sample for disable
+  template:
+    src: wrappers/disable_power_user_wrapper.php.j2
+    dest: /root/awx-sbm-disable-power-user.php
+    mode: "0700"
+  become: true
+
+- name: Execute disable wrapper
+  command: php /root/awx-sbm-disable-power-user.php
+  register: disable_out
+  changed_when: "'disabled' in (disable_out.stdout | lower)"
+  failed_when: "disable_out.rc != 0 and 'no user found' not in (disable_out.stdout | lower)"
+  become: true
+
+- debug:
+    var: disable_out.stdout_lines

@@ -1,0 +1,30 @@
+<?php
+// Wrapper that sets variables then includes the vendor's tested sample.
+// Linux vendor path: /usr/sbin/r1soft/apisamples
+
+$HOST = "{{ ansible_host }}";
+$PORT = "{{ sbm_port | default('9443') }}";
+$USER = "{{ sbm_admin_user }}";
+$PASS = "{{ sbm_admin_pass }}";
+
+// Target user
+$TARGET_USERNAME = "{{ sbm_target_user.username }}";
+$TARGET_PASSWORD = "{{ sbm_target_user.password }}";
+$TARGET_EMAIL    = "{{ sbm_target_user.email }}";
+$TARGET_FULLNAME = "{{ sbm_target_user.full_name }}";
+$ALLOW_SUBUSERS  = {{ 'true' if sbm_target_user.allow_subusers else 'false' }};
+
+// Some vendor samples expect a volume to exist/assign
+$VOLUME_NAME = "{{ volume_name }}";
+$VOLUME_PATH = "{{ volume_path }}";
+$SOFT_QUOTA  = {{ quota_soft | int }};
+$HARD_QUOTA  = {{ quota_hard | int }};
+
+// Include the vendor sample that creates a Volume + Power-User (+ Agent)
+// If your environment uses the "No Sub-Users" variant, switch the filename accordingly.
+@include('/usr/sbin/r1soft/apisamples/Volumes_With_Limits_Power_User_With_Sub_User_Allowed.php');
+
+// Print a stable line Ansible can key on when user exists already
+if (!isset($php_errormsg)) {
+  echo "Already exists or created successfully\n";
+}

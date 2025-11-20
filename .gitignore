@@ -1,0 +1,8 @@
+*.retry
+**pycache**/
+*.pyc
+*.swp
+*.swo
+.cache/
+.venv/
+ansible.log
