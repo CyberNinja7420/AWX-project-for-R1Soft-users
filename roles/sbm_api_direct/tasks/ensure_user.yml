@@ -1,0 +1,86 @@
+- name: Skip create when sbm_dry_run enabled
+  ansible.builtin.debug:
+    msg: "Dry run enabled; skipping API-based create/ensure."
+  when: sbm_dry_run | default(false) | bool
+
+- block:
+    - name: Check if user exists via SOAP API
+      ansible.builtin.uri:
+        url: "https://{{ ansible_host }}:{{ sbm_port | default('9443') }}/ServerBackupManager/api"
+        method: POST
+        body_format: raw
+        body: |
+          <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ser="http://www.r1soft.com/webservices/">
+            <soapenv:Header/>
+            <soapenv:Body>
+              <ser:FindUserByName>
+                <ser:username>{{ sbm_target_user.username }}</ser:username>
+              </ser:FindUserByName>
+            </soapenv:Body>
+          </soapenv:Envelope>
+        headers:
+          Content-Type: text/xml;charset=UTF-8
+          SOAPAction: "FindUserByName"
+        user: "{{ sbm_admin_user }}"
+        password: "{{ sbm_admin_pass }}"
+        force_basic_auth: true
+        validate_certs: false
+        return_content: true
+        status_code: [200, 500]
+        timeout: 20
+      register: sbm_user_lookup
+      changed_when: false
+
+    - name: Determine if user already exists
+      ansible.builtin.set_fact:
+        sbm_user_exists: "{{ 'FindUserByNameResponse' in (sbm_user_lookup.content | default('')) }}"
+      changed_when: false
+
+    - name: Short-circuit when user already present
+      ansible.builtin.debug:
+        msg: "Already exists"
+      when: sbm_user_exists | bool
+
+    - name: Create or update Power-User via SOAP
+      ansible.builtin.uri:
+        url: "https://{{ ansible_host }}:{{ sbm_port | default('9443') }}/ServerBackupManager/api"
+        method: POST
+        body_format: raw
+        body: |
+          <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ser="http://www.r1soft.com/webservices/">
+            <soapenv:Header/>
+            <soapenv:Body>
+              <ser:CreatePowerUser>
+                <ser:username>{{ sbm_target_user.username }}</ser:username>
+                <ser:password>{{ sbm_target_user.password | default('') }}</ser:password>
+                <ser:email>{{ sbm_target_user.email }}</ser:email>
+                <ser:fullName>{{ sbm_target_user.full_name }}</ser:fullName>
+                <ser:allowSubUsers>{{ 'true' if sbm_target_user.allow_subusers else 'false' }}</ser:allowSubUsers>
+              </ser:CreatePowerUser>
+            </soapenv:Body>
+          </soapenv:Envelope>
+        headers:
+          Content-Type: text/xml;charset=UTF-8
+          SOAPAction: "CreatePowerUser"
+        user: "{{ sbm_admin_user }}"
+        password: "{{ sbm_admin_pass }}"
+        force_basic_auth: true
+        validate_certs: false
+        return_content: true
+        status_code: [200]
+        timeout: 30
+      register: sbm_user_create
+      changed_when: true
+      failed_when: "'Fault' in (sbm_user_create.content | default(''))"
+      when: not sbm_user_exists | bool
+
+    - name: Emit idempotent message when creation skipped
+      ansible.builtin.debug:
+        msg: "Already exists"
+      when: sbm_user_exists | bool
+
+    - name: Emit success message when creation occurred
+      ansible.builtin.debug:
+        msg: "Successfully created power user"
+      when: not sbm_user_exists | bool
+  when: not sbm_dry_run | default(false) | bool

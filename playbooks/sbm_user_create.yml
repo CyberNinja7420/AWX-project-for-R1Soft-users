@@ -1,12 +1,25 @@
-- name: Ensure SBM Power-User exists (vendor sample + wrapper)
+- name: Ensure SBM Power-User exists (vendor sample + wrapper or pure API)
   hosts: sbms
   gather_facts: false
   vars:
     ansible_become: true
-  roles:
-    - role: sbm_api_samples
-      tasks_from: verify_samples.yml
+    use_vendor_samples: true
+    sbm_dry_run: false
+  pre_tasks:
+    - name: Run SBM preflight
+      ansible.builtin.include_role:
+        name: sbm_api_samples
+        tasks_from: preflight.yml
+
   tasks:
-    - include_role:
+    - name: Use vendor sample path
+      ansible.builtin.include_role:
         name: sbm_api_samples
         tasks_from: ensure_power_user.yml
+      when: use_vendor_samples | bool
+
+    - name: Use pure API path
+      ansible.builtin.include_role:
+        name: sbm_api_direct
+        tasks_from: ensure_user.yml
+      when: not use_vendor_samples | bool

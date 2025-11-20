@@ -1,0 +1,106 @@
+---
+- name: Bootstrap AWX objects for SBM user admin
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  collections:
+    - awx.awx
+  vars:
+    awx_state: present
+    awx_project_name: "SBM User Admin"
+    awx_inventory_name: "SBM Managers"
+    awx_credentials_name: "SBM Admin Credentials"
+    awx_job_prefix: "SBM"
+    awx_repo_url: "{{ lookup('env', 'AWX_REPO_URL') | default('https://example.com/sbm-user-admin.git', true) }}"
+    awx_org: "Default"
+    awx_host: "{{ lookup('env', 'AWX_HOST') }}"
+    awx_token: "{{ lookup('env', 'AWX_TOKEN') }}"
+
+  tasks:
+    - name: Require AWX host and token
+      ansible.builtin.assert:
+        that:
+          - awx_host | length > 0
+          - awx_token | length > 0
+        fail_msg: "awx_host and awx_token must be provided (env or extra vars)."
+
+    - name: Set controller connection
+      set_fact:
+        tower_host: "{{ awx_host }}"
+        tower_oauthtoken: "{{ awx_token }}"
+
+    - name: Ensure project exists
+      awx.awx.project:
+        name: "{{ awx_project_name }}"
+        organization: "{{ awx_org }}"
+        scm_type: git
+        scm_url: "{{ awx_repo_url }}"
+        state: "{{ awx_state }}"
+
+    - name: Ensure inventory exists
+      awx.awx.inventory:
+        name: "{{ awx_inventory_name }}"
+        organization: "{{ awx_org }}"
+        state: "{{ awx_state }}"
+
+    - name: Ensure inventory source syncs from SCM inventory file
+      awx.awx.inventory_source:
+        name: "SBM Inventory Source"
+        inventory: "{{ awx_inventory_name }}"
+        source: scm
+        source_project: "{{ awx_project_name }}"
+        source_path: inventories/sbms.yml
+        update_on_project_update: true
+        overwrite: true
+        state: "{{ awx_state }}"
+
+    - name: Ensure credentials placeholder exists
+      awx.awx.credential:
+        name: "{{ awx_credentials_name }}"
+        organization: "{{ awx_org }}"
+        credential_type: Machine
+        description: "SBM admin credential placeholder; set secrets in AWX UI."
+        state: "{{ awx_state }}"
+
+    - name: Load create survey definition
+      ansible.builtin.set_fact:
+        awx_create_survey: "{{ lookup('file', 'awx/surveys/create_user.survey.json') | from_json }}"
+        awx_disable_survey: "{{ lookup('file', 'awx/surveys/disable_user.survey.json') | from_json }}"
+
+    - name: Ensure create/ensure job template
+      awx.awx.job_template:
+        name: "{{ awx_job_prefix }} – Create/Ensure Power-User"
+        job_type: run
+        inventory: "{{ awx_inventory_name }}"
+        project: "{{ awx_project_name }}"
+        playbook: playbooks/sbm_user_create.yml
+        credentials:
+          - "{{ awx_credentials_name }}"
+        survey_enabled: true
+        survey_spec: "{{ awx_create_survey }}"
+        state: "{{ awx_state }}"
+
+    - name: Ensure disable job template
+      awx.awx.job_template:
+        name: "{{ awx_job_prefix }} – Disable Power-User"
+        job_type: run
+        inventory: "{{ awx_inventory_name }}"
+        project: "{{ awx_project_name }}"
+        playbook: playbooks/sbm_user_disable.yml
+        credentials:
+          - "{{ awx_credentials_name }}"
+        survey_enabled: true
+        survey_spec: "{{ awx_disable_survey }}"
+        state: "{{ awx_state }}"
+
+    - name: Ensure LDAP config job template
+      awx.awx.job_template:
+        name: "{{ awx_job_prefix }} – LDAP Config"
+        job_type: run
+        inventory: "{{ awx_inventory_name }}"
+        project: "{{ awx_project_name }}"
+        playbook: playbooks/sbm_ldap_config.yml
+        credentials:
+          - "{{ awx_credentials_name }}"
+        survey_enabled: false
+        state: "{{ awx_state }}"

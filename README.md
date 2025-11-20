@@ -1,64 +1,94 @@
 # sbm-user-admin
 
-AWX/Ansible project to manage R1Soft Server Backup Manager (SBM) users across many managers.
+AWX/Ansible content to create/update (idempotent) and disable R1Soft Server Backup Manager (SBM) Power-Users. Two execution paths are provided:
+- **Vendor samples** (default): thin wrappers around `/usr/sbin/r1soft/apisamples` for create/update and disable.
+- **Pure API** fallback: SOAP envelopes via `ansible.builtin.uri` without depending on packaged samples.
 
-## What this does
+## Features
+- Preflight checks for HTTPS reachability, SBM version detection, PHP/SOAP packages, and sample availability.
+- Idempotent outputs: wrappers emit **Already exists**, **Successfully created power user**, **Disabled**, or **Already disabled** to drive Ansible change reporting.
+- Optional LDAP/AD configuration playbook.
+- AWX surveys and an optional IaC bootstrap play for projects, inventory, credentials, and job templates.
+- CI with `ansible-lint` and `yamllint`.
+- Dry-run support (`sbm_dry_run=true`) to validate connectivity without changing users.
 
-* Uses vendor-tested SBM API sample scripts to create/update (idempotent) and disable Power-Users (optionally Sub-Users).
-* Runs from AWX with surveys and secured credentials per site/manager.
-* Verifies PHP SOAP + API samples exist on each SBM before making changes.
+## Layout
+- `inventories/` – example inventory for SBM endpoints.
+- `group_vars/` – defaults for target user, ports, LDAP settings, and toggles.
+- `playbooks/` – create/ensure, disable, and LDAP configuration entry points.
+- `roles/sbm_api_samples/` – vendor-sample wrappers plus preflight tasks.
+- `roles/sbm_api_direct/` – pure SOAP API fallback using `ansible.builtin.uri`.
+- `awx/surveys/` – importable AWX surveys.
+- `awx/bootstrap_awx.yml` – optional AWX IaC bootstrap using `awx.awx` collection.
+- `docs/` – research notes, API map, test plan, and test results.
+- `.github/workflows/ci.yml` – lint automation.
 
-## Prereqs
+## Prerequisites
+- AWX/Tower/AAP with access to SBM over HTTPS (default port `9443`).
+- PHP with SOAP on the SBM hosts when using vendor samples (`php-cli`, `php-soap`).
+- Automation credentials with least-privilege access to manage Power-Users.
+- Install Python dependencies for local runs:
+  ```bash
+  pip install -r requirements.txt
+  ```
 
-* AWX/Tower (or AAP) with a Project pointing to this repo
-* Each SBM exposes API at https://<sbm>:9443 (default) and includes vendor samples in `/usr/sbin/r1soft/apisamples`
-* Packages on SBM: `php-cli`, `php-soap`
-* Least-privileged SBM account for automation (not `admin`)
+## Configuration
+- Edit `inventories/sbms.yml` with your SBM hosts.
+- Update `group_vars/sbms.yml` as needed:
+  - `use_vendor_samples`: default `true`; set `false` to use pure API.
+  - `sbm_dry_run`: default `false`; set `true` for connectivity-only validation.
+  - `sbm_target_user`: username, password (blank when LDAP), email, full_name, allow_subusers.
+  - Volume placeholders (`volume_name`, `volume_path`, quotas) for vendor sample bootstrap.
+  - `ldap_config` for optional LDAP/AD deployment.
 
-## Quick start
+## Running locally
+- Preflight only:
+  ```bash
+  ansible-playbook playbooks/sbm_user_create.yml -i inventories/sbms.yml -e sbm_dry_run=true
+  ```
+- Create/ensure (vendor samples):
+  ```bash
+  ansible-playbook playbooks/sbm_user_create.yml -i inventories/sbms.yml -e use_vendor_samples=true
+  ```
+- Create/ensure (pure API):
+  ```bash
+  ansible-playbook playbooks/sbm_user_create.yml -i inventories/sbms.yml -e use_vendor_samples=false
+  ```
+- Disable user:
+  ```bash
+  ansible-playbook playbooks/sbm_user_disable.yml -i inventories/sbms.yml
+  ```
+- Configure LDAP:
+  ```bash
+  ansible-playbook playbooks/sbm_ldap_config.yml -i inventories/sbms.yml -e ldap_config.enable=true
+  ```
 
-1. Edit `inventories/sbms.yml` and `group_vars/sbms.yml`.
-2. In AWX, create a Project to this repo, import the Inventory, and create two Job Templates:
-   * **SBM – Create/Ensure Power-User** → `playbooks/sbm_user_create.yml`
-   * **SBM – Disable Power-User** → `playbooks/sbm_user_disable.yml`
-3. Add a Survey to each template (see `awx/surveys/*.json`).
-4. Run against a non-prod SBM first.
+## AWX usage
+1. Create a Project pointing to this repository.
+2. Create an Inventory from `inventories/sbms.yml` or your source of truth.
+3. Add Credentials for SBM admin access (machine or custom credential type); keep secrets out of SCM.
+4. Create Job Templates:
+   - **SBM – Create/Ensure Power-User** → `playbooks/sbm_user_create.yml`
+   - **SBM – Disable Power-User** → `playbooks/sbm_user_disable.yml`
+   - Optional **SBM – LDAP Config** → `playbooks/sbm_ldap_config.yml`
+5. Import surveys from `awx/surveys/*.json` or run `awx/bootstrap_awx.yml` to create resources via the `awx.awx` collection.
 
-## Importing into AWX
+## Compatibility
+See `docs/research.md` for research details and the version matrix. The automation warns (but does not fail) if DCC is requested on versions older than 6.18.
 
-1. Create a **Project** pointing to this repository.
-2. Create an **Inventory** and import `inventories/sbms.yml` (or sync from SCM).
-3. Add **Credentials** for the SBM admin account (machine or custom type as desired).
-4. Create two **Job Templates**:
-   * **SBM – Create/Ensure Power-User** using `playbooks/sbm_user_create.yml` and your `sbms` inventory group.
-   * **SBM – Disable Power-User** using `playbooks/sbm_user_disable.yml` and the same inventory.
-5. For each Job Template, click **Add Survey** → **Import** and choose the matching file from `awx/surveys/` (`create_user.survey.json` or `disable_user.survey.json`). Save.
-6. Set **Prompt on launch** for credentials to avoid storing secrets in SCM, then launch.
+## Security guidance
+- Use HTTPS with trusted certificates where possible; `validate_certs` is disabled only for bootstrap convenience.
+- Never hard-code secrets; rely on AWX credentials and surveys.
+- Prefer LDAP/AD for human users; reserve local credentials for break-glass automation.
 
-## Validating the playbooks before AWX
-
-Run these checks locally (or in CI) to confirm everything needed is present and the playbooks parse correctly:
-
+## CI and linting
+GitHub Actions runs `yamllint` and `ansible-lint`. Locally, use:
 ```bash
-# Verify required files exist and run syntax checks when ansible-playbook is available
-make self-test
-
-# Or run syntax checks directly
-make syntax-all
-
-# Render the inventory graph to confirm the sbms group is present
-make inventory-graph
+make ci
 ```
 
-If `ansible-playbook` is not installed, `make self-test` will still confirm that all expected repo files are present and report missing items.
+## Testing
+Follow `docs/test-plan.md` for acceptance steps and capture outputs in `docs/test-results.md`.
 
-## How it works
-
-* The role copies a small PHP **wrapper** that sets variables, then includes the official vendor sample script located on the SBM host. This keeps logic vendor-validated while letting us pass parameters safely.
-* Idempotence: the create wrapper checks for existing users and prints "Already exists" when no change is needed; the disable wrapper prints "Already disabled" when applicable. Ansible marks changed/ok accordingly.
-
-## Security tips
-
-* Use a dedicated SBM Power-User for automation; rotate creds in AWX.
-* Prefer LDAP/AD for human users; keep local accounts minimal.
-
+## Rollback
+See `ROLLBACK.md` for user disablement, removal of vendor wrappers, toggling to pure API, and AWX cleanup.

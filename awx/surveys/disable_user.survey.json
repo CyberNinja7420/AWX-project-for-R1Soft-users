@@ -4,6 +4,8 @@
   "spec": [
     {"question_name":"SBM Admin User","variable":"sbm_admin_user","type":"text","required":true},
     {"question_name":"SBM Admin Password","variable":"sbm_admin_pass","type":"password","required":true},
+    {"question_name":"Use vendor samples?","variable":"use_vendor_samples","type":"multiplechoice","choices":["true","false"],"default":"true","required":true},
+    {"question_name":"Dry run only (preflight)","variable":"sbm_dry_run","type":"multiplechoice","choices":["false","true"],"default":"false","required":true},
     {"question_name":"Target Username","variable":"sbm_target_user.username","type":"text","required":true}
   ]
 }

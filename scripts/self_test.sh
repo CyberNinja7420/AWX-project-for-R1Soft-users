@@ -7,11 +7,14 @@ cd "$repo_root"
 required_files=(
   "playbooks/sbm_user_create.yml"
   "playbooks/sbm_user_disable.yml"
-  "roles/sbm_api_samples/tasks/verify_samples.yml"
+  "playbooks/sbm_ldap_config.yml"
+  "roles/sbm_api_samples/tasks/preflight.yml"
   "roles/sbm_api_samples/tasks/ensure_power_user.yml"
   "roles/sbm_api_samples/tasks/disable_power_user.yml"
   "roles/sbm_api_samples/templates/wrappers/create_power_user_wrapper.php.j2"
   "roles/sbm_api_samples/templates/wrappers/disable_power_user_wrapper.php.j2"
+  "roles/sbm_api_direct/tasks/ensure_user.yml"
+  "roles/sbm_api_direct/tasks/disable_user.yml"
   "awx/surveys/create_user.survey.json"
   "awx/surveys/disable_user.survey.json"
   "inventories/sbms.yml"
@@ -42,6 +45,7 @@ ANSIBLE_INVENTORY="${ANSIBLE_INVENTORY:-inventories/sbms.yml}"
 
 ansible-playbook -i "$ANSIBLE_INVENTORY" playbooks/sbm_user_create.yml --syntax-check
 ansible-playbook -i "$ANSIBLE_INVENTORY" playbooks/sbm_user_disable.yml --syntax-check
+ansible-playbook -i "$ANSIBLE_INVENTORY" playbooks/sbm_ldap_config.yml --syntax-check
 
 if command -v ansible-inventory >/dev/null 2>&1; then
   ansible-inventory -i "$ANSIBLE_INVENTORY" --graph
