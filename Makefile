@@ -1,8 +1,16 @@
 .PHONY: lint scan scan_csv bootstrap_awx
 
 lint:
-	ansible-galaxy collection install -r requirements.yml
-	ansible-lint
+	@if [ "${SKIP_GALAXY_INSTALL}" != "1" ]; then \
+		ansible-galaxy collection install -r requirements.yml; \
+	else \
+		echo "Skipping ansible-galaxy collection install (SKIP_GALAXY_INSTALL=1)"; \
+	fi
+	@if [ "${SKIP_GALAXY_INSTALL}" = "1" ]; then \
+		ansible-lint --offline; \
+	else \
+		ansible-lint; \
+	fi
 	yamllint .
 
 scan:
