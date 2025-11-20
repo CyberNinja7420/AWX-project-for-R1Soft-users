@@ -1,4 +1,5 @@
 ---
 collections:
+  # Tested with ansible-core 2.15+ and awx.awx/community.general from Galaxy defaults.
   - name: awx.awx
   - name: community.general

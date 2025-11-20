@@ -14,11 +14,13 @@
 
     - name: Execute disable wrapper
       ansible.builtin.command: php /root/awx-sbm-disable-power-user.php
-      register: sbm_api_samples_disable_out
-      changed_when: "'disabled' in (sbm_api_samples_disable_out.stdout | lower)"
-      failed_when: "sbm_api_samples_disable_out.rc != 0 and 'already disabled' not in (sbm_api_samples_disable_out.stdout | lower) and 'no user found' not in (sbm_api_samples_disable_out.stdout | lower)"
+      register: disable_out
+      changed_when: >
+        ('disabled' in (disable_out.stdout | lower))
+        or ('successfully disabled' in (disable_out.stdout | lower))
+      failed_when: "disable_out.rc != 0 and 'already disabled' not in (disable_out.stdout | lower) and 'no user found' not in (disable_out.stdout | lower)"
       become: true
 
     - name: Show disable output
       ansible.builtin.debug:
-        var: sbm_api_samples_disable_out.stdout_lines
+        var: disable_out.stdout_lines

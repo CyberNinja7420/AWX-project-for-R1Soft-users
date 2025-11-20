@@ -8,7 +8,8 @@ AWX/Ansible content to scan Server Backup Manager (SBM) inventories, render repo
   - `playbooks/sbm_scan.yml` (Path A): scan hosts already present in the `sbms` group.
   - `playbooks/sbm_scan_from_csv.yml` (Path B): build an in-memory `sbms` group from CSV, then scan.
   - `playbooks/sbm_scan_report_only.yml`: regenerate JSON/Markdown reports from existing host vars (useful for AWX artifacts).
-- Reports render to `reports/` as `sbm_scan_<UTC>.json` and `.md` using templates in `roles/sbm_scan/templates/`.
+- Reports render to `reports/` as `sbm_scan_<UTC>.json` and `.md` using templates in `roles/sbm_scan/templates/`; JSON is also pu
+blished to AWX artifacts for download.
 
 ## CSV Onboarding
 - Sample `data/sbms.csv` demonstrates the header `name,host,port,site,env,api_user,api_pass_var,dcc_url` with placeholder rows.
@@ -68,6 +69,10 @@ GitHub Actions runs `make lint` (yamllint + ansible-lint). Locally:
 ```bash
 make lint
 ```
+
+The repository ships `ansible.cfg` with YAML callbacks, disabled SSH host-key prompts (for labs), retry files disabled, and a `.g
+itignore` that keeps generated JSON reports and caches out of Git. Use the Makefile targets to install Galaxy collections before
+ running lint or bootstrapping AWX.
 
 ## Testing
 Follow `docs/test-plan-scan.md` for scanner acceptance steps and `docs/test-plan.md` for Power-User coverage.

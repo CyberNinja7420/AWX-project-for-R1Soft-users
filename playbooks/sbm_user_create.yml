@@ -1,6 +1,10 @@
 - name: Ensure SBM Power-User exists (vendor sample + wrapper or pure API)
   hosts: sbms
   gather_facts: false
+  collections:
+    - ansible.builtin
+    - community.general
+    - awx.awx
   vars:
     ansible_become: true
     use_vendor_samples: true

@@ -2,24 +2,30 @@
 - name: Onboard SBMs into AWX Inventory from CSV
   hosts: localhost
   gather_facts: false
+  collections:
+    - ansible.builtin
+    - community.general
+    - awx.awx
   vars:
     csv_path: "data/sbms.csv"
     awx_inventory: "R1Soft-SBMs"
     awx_org: "Default"
+    _awx_host: "{{ awx_host | default(tower_host | default('')) }}"
+    _awx_token: "{{ awx_token | default(tower_oauthtoken | default('')) }}"
   tasks:
     - name: Require controller details
       ansible.builtin.assert:
         that:
-          - awx_host is defined and awx_host | length > 0
-          - awx_token is defined and awx_token | length > 0
+          - _awx_host | length > 0
+          - _awx_token | length > 0
         fail_msg: "awx_host and awx_token are required (pass via -e)."
 
     - name: Ensure AWX inventory exists
       awx.awx.inventory:
         name: "{{ awx_inventory }}"
         organization: "{{ awx_org }}"
-        controller_host: "{{ awx_host }}"
-        controller_oauthtoken: "{{ awx_token }}"
+        controller_host: "{{ _awx_host }}"
+        controller_oauthtoken: "{{ _awx_token }}"
         validate_certs: false
 
     - name: Read CSV
@@ -36,7 +42,7 @@
           sbm_port: "{{ item.port | default('9443') }}"
           site: "{{ item.site | default('') }}"
           env: "{{ item.env | default('') }}"
-        controller_host: "{{ awx_host }}"
-        controller_oauthtoken: "{{ awx_token }}"
+        controller_host: "{{ _awx_host }}"
+        controller_oauthtoken: "{{ _awx_token }}"
         validate_certs: false
       loop: "{{ rows.list }}"
