@@ -9,7 +9,7 @@
         name: sbm_api_samples
         tasks_from: preflight.yml
       vars:
-        use_vendor_samples: false
+        sbm_api_samples_use_vendor_samples: false
 
   tasks:
     - name: Skip LDAP configuration when dry-run
@@ -17,7 +17,9 @@
         msg: "sbm_dry_run=true: LDAP configuration skipped."
       when: sbm_dry_run | default(false) | bool
 
-    - block:
+    - name: Apply LDAP configuration when not in dry-run
+      when: not sbm_dry_run | default(false) | bool
+      block:
         - name: Validate LDAP inputs
           ansible.builtin.assert:
             that:
@@ -42,7 +44,7 @@
                     <ser:baseDn>{{ ldap_config.base_dn }}</ser:baseDn>
                     <ser:userFilter>{{ ldap_config.user_filter | default('(sAMAccountName={0})') }}</ser:userFilter>
                     <ser:groupMapping>{{ ldap_config.group_mapping | default('') }}</ser:groupMapping>
-                    <ser:enable>{{ ldap_config.enable | default(false) | ternary('true','false') }}</ser:enable>
+                    <ser:enable>{{ ldap_config.enable | default(false) | ternary('true', 'false') }}</ser:enable>
                   </ser:SetLdapConfig>
                 </soapenv:Body>
               </soapenv:Envelope>
@@ -63,4 +65,3 @@
         - name: Report LDAP configuration status
           ansible.builtin.debug:
             msg: "LDAP configuration applied"
-      when: not sbm_dry_run | default(false) | bool

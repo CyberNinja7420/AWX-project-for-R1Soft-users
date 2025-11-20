@@ -2,10 +2,7 @@
 - name: Build in-memory inventory from CSV and scan
   hosts: localhost
   gather_facts: false
-  collections:
-    - ansible.builtin
-    - community.general
-    - awx.awx
+  strategy: linear
   vars:
     csv_path: "data/sbms.csv"
   tasks:
@@ -29,10 +26,7 @@
 - name: Scan all CSV-provided SBMs
   hosts: sbms
   gather_facts: false
-  collections:
-    - ansible.builtin
-    - community.general
-    - awx.awx
+  strategy: linear
   roles:
     - sbm_scan
   post_tasks:
@@ -40,6 +34,7 @@
       ansible.builtin.file:
         path: reports
         state: directory
+        mode: "0755"
       run_once: true
       delegate_to: localhost
     - name: Set report timestamp (controller)
@@ -52,6 +47,7 @@
       ansible.builtin.template:
         src: "report.json.j2"
         dest: "reports/sbm_scan_{{ report_ts }}.json"
+        mode: "0644"
       run_once: true
       delegate_to: localhost
     - name: Publish JSON report artifact (AWX controller)
@@ -65,5 +61,6 @@
       ansible.builtin.template:
         src: "report.md.j2"
         dest: "reports/sbm_scan_{{ report_ts }}.md"
+        mode: "0644"
       run_once: true
       delegate_to: localhost

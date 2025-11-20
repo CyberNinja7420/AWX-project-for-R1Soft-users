@@ -41,17 +41,22 @@
     fail_msg: "php-cli and php-soap must be installed on the SBM host for wrapper/API execution"
     success_msg: "Required PHP packages present"
 
+- name: Normalize vendor sample flag
+  ansible.builtin.set_fact:
+    sbm_api_samples_use_vendor_samples: "{{ sbm_api_samples_use_vendor_samples | default(use_vendor_samples | default(true)) }}"
+  changed_when: false
+
 - name: Verify vendor API samples exist
   ansible.builtin.stat:
     path: /usr/sbin/r1soft/apisamples
   register: sbm_api_samples_path
-  when: use_vendor_samples | default(true) | bool
+  when: sbm_api_samples_use_vendor_samples | bool
 
 - name: Abort if samples are missing
   ansible.builtin.fail:
     msg: "R1Soft API samples missing at /usr/sbin/r1soft/apisamples on {{ inventory_hostname }}"
   when:
-    - use_vendor_samples | default(true) | bool
+    - sbm_api_samples_use_vendor_samples | bool
     - not sbm_api_samples_path.stat.exists
 
 - name: Note dry-run status

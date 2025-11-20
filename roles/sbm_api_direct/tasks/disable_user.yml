@@ -3,7 +3,8 @@
     msg: "Dry run enabled; skipping API-based disable."
   when: sbm_dry_run | default(false) | bool
 
-- when: not sbm_dry_run | default(false) | bool
+- name: Disable power user via SOAP when not in dry-run
+  when: not sbm_dry_run | default(false) | bool
   block:
     - name: Check if user exists via SOAP API
       ansible.builtin.uri:

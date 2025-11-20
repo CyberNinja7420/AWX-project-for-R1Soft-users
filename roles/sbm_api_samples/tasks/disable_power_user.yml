@@ -3,7 +3,8 @@
     msg: "Dry run enabled; skipping disable."
   when: sbm_dry_run | default(false) | bool
 
-- when: not sbm_dry_run | default(false) | bool
+- name: Disable power user when not in dry-run
+  when: not sbm_dry_run | default(false) | bool
   block:
     - name: Deploy wrapper to include vendor sample for disable
       ansible.builtin.template:
@@ -14,13 +15,16 @@
 
     - name: Execute disable wrapper
       ansible.builtin.command: php /root/awx-sbm-disable-power-user.php
-      register: disable_out
+      register: sbm_api_samples_disable_out
       changed_when: >
-        ('disabled' in (disable_out.stdout | lower))
-        or ('successfully disabled' in (disable_out.stdout | lower))
-      failed_when: "disable_out.rc != 0 and 'already disabled' not in (disable_out.stdout | lower) and 'no user found' not in (disable_out.stdout | lower)"
+        ('disabled' in (sbm_api_samples_disable_out.stdout | lower))
+        or ('successfully disabled' in (sbm_api_samples_disable_out.stdout | lower))
+      failed_when: >-
+        sbm_api_samples_disable_out.rc != 0
+        and 'already disabled' not in (sbm_api_samples_disable_out.stdout | lower)
+        and 'no user found' not in (sbm_api_samples_disable_out.stdout | lower)
       become: true
 
     - name: Show disable output
       ansible.builtin.debug:
-        var: disable_out.stdout_lines
+        var: sbm_api_samples_disable_out.stdout_lines
