@@ -1,18 +1,1 @@
-- name: Ensure PHP CLI + SOAP present
-  package:
-    name: "{{ item }}"
-    state: present
-  loop:
-    - php-cli
-    - php-soap
-  become: true
-
-- name: Verify vendor API samples exist
-  stat:
-    path: /usr/sbin/r1soft/apisamples
-  register: sbm_samples
-
-- name: Abort if samples are missing
-  fail:
-    msg: "R1Soft API samples missing at /usr/sbin/r1soft/apisamples on {{ inventory_hostname }}"
-  when: not sbm_samples.stat.exists
+- import_tasks: preflight.yml

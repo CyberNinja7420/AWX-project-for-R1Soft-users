@@ -2,6 +2,11 @@
 sbm_admin_user: ""
 sbm_admin_pass: ""
 
+# Behavior toggles
+use_vendor_samples: true
+sbm_dry_run: false
+enable_dcc: false
+
 # Default target user for tests; override via AWX survey
 sbm_target_user:
   username: "backupops"
@@ -15,3 +20,13 @@ volume_name: "awx_user_bootstrap"
 volume_path: "/var/r1soft/awx_bootstrap"
 quota_soft: 1000000
 quota_hard: 2000000
+
+# LDAP/AD configuration (optional)
+ldap_config:
+  enable: false
+  server_url: ""
+  bind_dn: ""
+  bind_password: ""
+  base_dn: ""
+  user_filter: "(sAMAccountName={0})"
+  group_mapping: ""

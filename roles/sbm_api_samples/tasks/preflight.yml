@@ -1,0 +1,60 @@
+- name: Check HTTPS reachability
+  ansible.builtin.uri:
+    url: "https://{{ ansible_host }}:{{ sbm_port | default('9443') }}/"
+    method: GET
+    validate_certs: false
+    return_content: true
+    follow_redirects: all
+    status_code: [200, 301, 302, 401]
+    timeout: 15
+  register: sbm_http_check
+  changed_when: false
+
+- name: Detect SBM version from response
+  ansible.builtin.set_fact:
+    sbm_version: "{{ (sbm_http_check.content | regex_search('Server Backup Manager[^0-9]*([0-9.]+)', '\\1')) | default('', true) }}"
+  changed_when: false
+
+- name: Warn when SBM version not detected
+  ansible.builtin.debug:
+    msg: "Could not detect SBM version from HTTPS response; continuing with defaults."
+    verbosity: 1
+  when: sbm_version | default('') == ''
+
+- name: Warn when DCC requested on deprecated versions
+  ansible.builtin.debug:
+    msg: "DCC features are deprecated; requested enablement on SBM {{ sbm_version | default('unknown') }}. Proceeding with warning only."
+    warn: true
+  when:
+    - enable_dcc | default(false) | bool
+    - sbm_version is version('6.18', '<')
+
+- name: Gather package facts
+  ansible.builtin.package_facts:
+    manager: auto
+
+- name: Check PHP SOAP dependencies
+  ansible.builtin.assert:
+    that:
+      - "'php-cli' in ansible_facts.packages"
+      - "'php-soap' in ansible_facts.packages"
+    fail_msg: "php-cli and php-soap must be installed on the SBM host for wrapper/API execution"
+    success_msg: "Required PHP packages present"
+
+- name: Verify vendor API samples exist
+  ansible.builtin.stat:
+    path: /usr/sbin/r1soft/apisamples
+  register: sbm_samples_path
+  when: use_vendor_samples | default(true) | bool
+
+- name: Abort if samples are missing
+  ansible.builtin.fail:
+    msg: "R1Soft API samples missing at /usr/sbin/r1soft/apisamples on {{ inventory_hostname }}"
+  when:
+    - use_vendor_samples | default(true) | bool
+    - not sbm_samples_path.stat.exists
+
+- name: Note dry-run status
+  ansible.builtin.debug:
+    msg: "sbm_dry_run=true: preflight completed; skipping changes."
+  when: sbm_dry_run | default(false) | bool

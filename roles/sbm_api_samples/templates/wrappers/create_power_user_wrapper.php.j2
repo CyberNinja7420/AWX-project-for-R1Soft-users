@@ -20,11 +20,45 @@ $VOLUME_PATH = "{{ volume_path }}";
 $SOFT_QUOTA  = {{ quota_soft | int }};
 $HARD_QUOTA  = {{ quota_hard | int }};
 
+$alreadyExists = false;
+try {
+  $contextOptions = array(
+    'ssl' => array(
+      'verify_peer' => false,
+      'verify_peer_name' => false,
+    )
+  );
+  $client = @new SoapClient(
+    "https://{$HOST}:{$PORT}/ServerBackupManager/api?wsdl",
+    array(
+      'login' => $USER,
+      'password' => $PASS,
+      'trace' => 0,
+      'exceptions' => 1,
+      'cache_wsdl' => WSDL_CACHE_NONE,
+      'stream_context' => stream_context_create($contextOptions)
+    )
+  );
+  $result = $client->__soapCall('FindUserByName', array(array('username' => $TARGET_USERNAME)));
+  if ($result) {
+    $alreadyExists = true;
+  }
+} catch (Exception $e) {
+  // Continue to create path when user lookup fails.
+}
+
+if ($alreadyExists) {
+  echo "Already exists\n";
+  exit(0);
+}
+
 // Include the vendor sample that creates a Volume + Power-User (+ Agent)
 // If your environment uses the "No Sub-Users" variant, switch the filename accordingly.
 @include('/usr/sbin/r1soft/apisamples/Volumes_With_Limits_Power_User_With_Sub_User_Allowed.php');
 
-// Print a stable line Ansible can key on when user exists already
 if (!isset($php_errormsg)) {
-  echo "Already exists or created successfully\n";
+  echo "Successfully created power user\n";
+} else {
+  echo "Failed to create power user: {$php_errormsg}\n";
+  exit(1);
 }

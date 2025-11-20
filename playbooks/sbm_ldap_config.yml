@@ -1,0 +1,66 @@
+- name: Configure SBM LDAP/AD
+  hosts: sbms
+  gather_facts: false
+  vars:
+    ansible_become: true
+  pre_tasks:
+    - name: Run SBM preflight
+      ansible.builtin.include_role:
+        name: sbm_api_samples
+        tasks_from: preflight.yml
+      vars:
+        use_vendor_samples: false
+
+  tasks:
+    - name: Skip LDAP configuration when dry-run
+      ansible.builtin.debug:
+        msg: "sbm_dry_run=true: LDAP configuration skipped."
+      when: sbm_dry_run | default(false) | bool
+
+    - block:
+        - name: Validate LDAP inputs
+          ansible.builtin.assert:
+            that:
+              - ldap_config.server_url is defined and ldap_config.server_url | length > 0
+              - ldap_config.bind_dn is defined and ldap_config.bind_dn | length > 0
+              - ldap_config.base_dn is defined and ldap_config.base_dn | length > 0
+            fail_msg: "Missing LDAP configuration fields (server_url, bind_dn, base_dn)."
+
+        - name: Configure LDAP via SOAP
+          ansible.builtin.uri:
+            url: "https://{{ ansible_host }}:{{ sbm_port | default('9443') }}/ServerBackupManager/api"
+            method: POST
+            body_format: raw
+            body: |
+              <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ser="http://www.r1soft.com/webservices/">
+                <soapenv:Header/>
+                <soapenv:Body>
+                  <ser:SetLdapConfig>
+                    <ser:serverUrl>{{ ldap_config.server_url }}</ser:serverUrl>
+                    <ser:bindDn>{{ ldap_config.bind_dn }}</ser:bindDn>
+                    <ser:bindPassword>{{ ldap_config.bind_password | default('') }}</ser:bindPassword>
+                    <ser:baseDn>{{ ldap_config.base_dn }}</ser:baseDn>
+                    <ser:userFilter>{{ ldap_config.user_filter | default('(sAMAccountName={0})') }}</ser:userFilter>
+                    <ser:groupMapping>{{ ldap_config.group_mapping | default('') }}</ser:groupMapping>
+                    <ser:enable>{{ ldap_config.enable | default(false) | ternary('true','false') }}</ser:enable>
+                  </ser:SetLdapConfig>
+                </soapenv:Body>
+              </soapenv:Envelope>
+            headers:
+              Content-Type: text/xml;charset=UTF-8
+              SOAPAction: "SetLdapConfig"
+            user: "{{ sbm_admin_user }}"
+            password: "{{ sbm_admin_pass }}"
+            force_basic_auth: true
+            validate_certs: false
+            return_content: true
+            status_code: [200]
+            timeout: 30
+          register: sbm_ldap_apply
+          changed_when: true
+          failed_when: "'Fault' in (sbm_ldap_apply.content | default(''))"
+
+        - name: Report LDAP configuration status
+          ansible.builtin.debug:
+            msg: "LDAP configuration applied"
+      when: not sbm_dry_run | default(false) | bool

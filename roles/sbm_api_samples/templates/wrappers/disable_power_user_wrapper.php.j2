@@ -9,7 +9,42 @@ $PASS = "{{ sbm_admin_pass }}";
 
 $TARGET_USERNAME = "{{ sbm_target_user.username }}";
 
+$contextOptions = array(
+  'ssl' => array(
+    'verify_peer' => false,
+    'verify_peer_name' => false,
+  )
+);
+
+$alreadyDisabled = false;
+try {
+  $client = @new SoapClient(
+    "https://{$HOST}:{$PORT}/ServerBackupManager/api?wsdl",
+    array(
+      'login' => $USER,
+      'password' => $PASS,
+      'trace' => 0,
+      'exceptions' => 1,
+      'cache_wsdl' => WSDL_CACHE_NONE,
+      'stream_context' => stream_context_create($contextOptions)
+    )
+  );
+  $response = $client->__soapCall('FindUserByName', array(array('username' => $TARGET_USERNAME)));
+  if (!$response) {
+    $alreadyDisabled = true;
+  } elseif (isset($response->disabled) && $response->disabled === true) {
+    $alreadyDisabled = true;
+  }
+} catch (Exception $e) {
+  // Continue to disable path if lookup fails.
+}
+
+if ($alreadyDisabled) {
+  echo "Already disabled\n";
+  exit(0);
+}
+
 // A generic "disable power user and sub-users" sample filename; adjust to actual path if needed:
 @include('/usr/sbin/r1soft/apisamples/Disable_Power_User_And_Subusers.php');
 
-echo "Disable invoked\n";
+echo "Disabled\n";
