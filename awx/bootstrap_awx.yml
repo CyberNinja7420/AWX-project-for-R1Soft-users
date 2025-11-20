@@ -1,106 +1,113 @@
 ---
-- name: Bootstrap AWX objects for SBM user admin
+- name: Bootstrap AWX objects for sbm-user-admin
   hosts: localhost
-  connection: local
   gather_facts: false
-  collections:
-    - awx.awx
   vars:
-    awx_state: present
-    awx_project_name: "SBM User Admin"
-    awx_inventory_name: "SBM Managers"
-    awx_credentials_name: "SBM Admin Credentials"
-    awx_job_prefix: "SBM"
-    awx_repo_url: "{{ lookup('env', 'AWX_REPO_URL') | default('https://example.com/sbm-user-admin.git', true) }}"
     awx_org: "Default"
-    awx_host: "{{ lookup('env', 'AWX_HOST') }}"
-    awx_token: "{{ lookup('env', 'AWX_TOKEN') }}"
-
+    awx_inventory: "R1Soft-SBMs"
+    awx_project: "sbm-user-admin"
+    awx_credential: "SBM API (survey-driven)"
+    project_repo_url: ""
   tasks:
-    - name: Require AWX host and token
+    - name: Require controller details and repo URL
       ansible.builtin.assert:
         that:
-          - awx_host | length > 0
-          - awx_token | length > 0
-        fail_msg: "awx_host and awx_token must be provided (env or extra vars)."
+          - awx_host is defined and awx_host | length > 0
+          - awx_token is defined and awx_token | length > 0
+          - project_repo_url | length > 0
+        fail_msg: "awx_host, awx_token, and project_repo_url are required (pass via -e)."
 
-    - name: Set controller connection
-      set_fact:
-        tower_host: "{{ awx_host }}"
-        tower_oauthtoken: "{{ awx_token }}"
-
-    - name: Ensure project exists
+    - name: Ensure Project
       awx.awx.project:
-        name: "{{ awx_project_name }}"
+        name: "{{ awx_project }}"
         organization: "{{ awx_org }}"
         scm_type: git
-        scm_url: "{{ awx_repo_url }}"
-        state: "{{ awx_state }}"
+        scm_url: "{{ project_repo_url }}"
+        scm_branch: main
+        controller_host: "{{ awx_host }}"
+        controller_oauthtoken: "{{ awx_token }}"
+        validate_certs: false
 
-    - name: Ensure inventory exists
+    - name: Ensure Inventory
       awx.awx.inventory:
-        name: "{{ awx_inventory_name }}"
+        name: "{{ awx_inventory }}"
         organization: "{{ awx_org }}"
-        state: "{{ awx_state }}"
+        controller_host: "{{ awx_host }}"
+        controller_oauthtoken: "{{ awx_token }}"
+        validate_certs: false
 
-    - name: Ensure inventory source syncs from SCM inventory file
-      awx.awx.inventory_source:
-        name: "SBM Inventory Source"
-        inventory: "{{ awx_inventory_name }}"
-        source: scm
-        source_project: "{{ awx_project_name }}"
-        source_path: inventories/sbms.yml
-        update_on_project_update: true
-        overwrite: true
-        state: "{{ awx_state }}"
-
-    - name: Ensure credentials placeholder exists
+    - name: Create placeholder credential (no secrets stored)
       awx.awx.credential:
-        name: "{{ awx_credentials_name }}"
+        name: "{{ awx_credential }}"
         organization: "{{ awx_org }}"
         credential_type: Machine
-        description: "SBM admin credential placeholder; set secrets in AWX UI."
-        state: "{{ awx_state }}"
+        inputs: {}
+        controller_host: "{{ awx_host }}"
+        controller_oauthtoken: "{{ awx_token }}"
+        validate_certs: false
 
-    - name: Load create survey definition
-      ansible.builtin.set_fact:
-        awx_create_survey: "{{ lookup('file', 'awx/surveys/create_user.survey.json') | from_json }}"
-        awx_disable_survey: "{{ lookup('file', 'awx/surveys/disable_user.survey.json') | from_json }}"
+    - name: Load surveys
+      set_fact:
+        survey_scan: "{{ lookup('file','awx/surveys/sbm_scan.survey.json') | from_json }}"
+        survey_create: "{{ lookup('file','awx/surveys/create_user.survey.json') | from_json }}"
+        survey_disable: "{{ lookup('file','awx/surveys/disable_user.survey.json') | from_json }}"
 
-    - name: Ensure create/ensure job template
+    - name: Ensure JT - Inventory Scan & Report (Inventory)
       awx.awx.job_template:
-        name: "{{ awx_job_prefix }} – Create/Ensure Power-User"
+        name: "SBM – Inventory Scan & Report (Inventory)"
         job_type: run
-        inventory: "{{ awx_inventory_name }}"
-        project: "{{ awx_project_name }}"
-        playbook: playbooks/sbm_user_create.yml
-        credentials:
-          - "{{ awx_credentials_name }}"
+        use_fact_cache: false
+        inventory: "{{ awx_inventory }}"
+        project: "{{ awx_project }}"
+        playbook: "playbooks/sbm_scan.yml"
         survey_enabled: true
-        survey_spec: "{{ awx_create_survey }}"
-        state: "{{ awx_state }}"
+        survey_spec: "{{ survey_scan }}"
+        verbosity: 1
+        controller_host: "{{ awx_host }}"
+        controller_oauthtoken: "{{ awx_token }}"
+        validate_certs: false
 
-    - name: Ensure disable job template
+    - name: Ensure JT - Inventory Scan & Report (CSV)
       awx.awx.job_template:
-        name: "{{ awx_job_prefix }} – Disable Power-User"
+        name: "SBM – Inventory Scan & Report (CSV)"
         job_type: run
-        inventory: "{{ awx_inventory_name }}"
-        project: "{{ awx_project_name }}"
-        playbook: playbooks/sbm_user_disable.yml
-        credentials:
-          - "{{ awx_credentials_name }}"
+        use_fact_cache: false
+        inventory: "{{ awx_inventory }}"
+        project: "{{ awx_project }}"
+        playbook: "playbooks/sbm_scan_from_csv.yml"
         survey_enabled: true
-        survey_spec: "{{ awx_disable_survey }}"
-        state: "{{ awx_state }}"
+        survey_spec: "{{ survey_scan }}"
+        verbosity: 1
+        controller_host: "{{ awx_host }}"
+        controller_oauthtoken: "{{ awx_token }}"
+        validate_certs: false
 
-    - name: Ensure LDAP config job template
+    - name: Ensure JT - Create/Ensure Power-User
       awx.awx.job_template:
-        name: "{{ awx_job_prefix }} – LDAP Config"
+        name: "SBM – Create/Ensure Power-User"
         job_type: run
-        inventory: "{{ awx_inventory_name }}"
-        project: "{{ awx_project_name }}"
-        playbook: playbooks/sbm_ldap_config.yml
-        credentials:
-          - "{{ awx_credentials_name }}"
-        survey_enabled: false
-        state: "{{ awx_state }}"
+        use_fact_cache: false
+        inventory: "{{ awx_inventory }}"
+        project: "{{ awx_project }}"
+        playbook: "playbooks/sbm_user_create.yml"
+        survey_enabled: true
+        survey_spec: "{{ survey_create }}"
+        verbosity: 1
+        controller_host: "{{ awx_host }}"
+        controller_oauthtoken: "{{ awx_token }}"
+        validate_certs: false
+
+    - name: Ensure JT - Disable Power-User
+      awx.awx.job_template:
+        name: "SBM – Disable Power-User"
+        job_type: run
+        use_fact_cache: false
+        inventory: "{{ awx_inventory }}"
+        project: "{{ awx_project }}"
+        playbook: "playbooks/sbm_user_disable.yml"
+        survey_enabled: true
+        survey_spec: "{{ survey_disable }}"
+        verbosity: 1
+        controller_host: "{{ awx_host }}"
+        controller_oauthtoken: "{{ awx_token }}"
+        validate_certs: false

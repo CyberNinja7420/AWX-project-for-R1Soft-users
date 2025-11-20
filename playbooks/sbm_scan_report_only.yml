@@ -1,0 +1,23 @@
+---
+- name: Rebuild report from existing hostvars (e.g., AWX artifacts)
+  hosts: sbms
+  gather_facts: false
+  tasks:
+    - name: Ensure reports directory (controller)
+      file:
+        path: reports
+        state: directory
+      run_once: true
+      delegate_to: localhost
+    - name: Emit JSON & MD
+      block:
+        - template:
+            src: "report.json.j2"
+            dest: "reports/sbm_scan_rerender.json"
+          delegate_to: localhost
+          run_once: true
+        - template:
+            src: "report.md.j2"
+            dest: "reports/sbm_scan_rerender.md"
+          delegate_to: localhost
+          run_once: true

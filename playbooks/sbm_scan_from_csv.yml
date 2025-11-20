@@ -1,0 +1,48 @@
+---
+- name: Build in-memory inventory from CSV and scan
+  hosts: localhost
+  gather_facts: false
+  vars:
+    csv_path: "data/sbms.csv"
+  tasks:
+    - name: Read CSV
+      community.general.read_csv:
+        path: "{{ csv_path }}"
+      register: rows
+
+    - name: Add hosts to in-memory inventory group "sbms"
+      add_host:
+        name: "{{ item.name }}"
+        groups: "sbms"
+        sbm_host: "{{ item.host }}"
+        sbm_port: "{{ item.port | default('9443') }}"
+        site: "{{ item.site | default('') }}"
+        env: "{{ item.env | default('') }}"
+        sbm_api_user: "{{ item.api_user | default('') }}"
+        sbm_api_pass: "{{ hostvars.localhost[item.api_pass_var] | default('') }}"
+      loop: "{{ rows.list }}"
+
+- name: Scan all CSV-provided SBMs
+  hosts: sbms
+  gather_facts: false
+  roles:
+    - sbm_scan
+  post_tasks:
+    - name: Ensure reports directory (controller)
+      file:
+        path: reports
+        state: directory
+      run_once: true
+      delegate_to: localhost
+    - name: Emit JSON report
+      template:
+        src: "report.json.j2"
+        dest: "reports/sbm_scan_{{ lookup('pipe','date -u +%Y%m%dT%H%M%SZ') }}.json"
+      run_once: true
+      delegate_to: localhost
+    - name: Emit Markdown report
+      template:
+        src: "report.md.j2"
+        dest: "reports/sbm_scan_{{ lookup('pipe','date -u +%Y%m%dT%H%M%SZ') }}.md"
+      run_once: true
+      delegate_to: localhost

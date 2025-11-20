@@ -1,0 +1,16 @@
+---
+- name: Check vendor API samples path (Linux)
+  stat:
+    path: /usr/sbin/r1soft/apisamples
+  register: samples_dir
+
+- name: Check PHP SOAP module (if php exists)
+  shell: "php -m | egrep -i '(^|[[:space:]])(soap)($|[[:space:]])'"
+  register: php_modules
+  changed_when: false
+  failed_when: false
+
+- name: Save OS probe facts
+  set_fact:
+    sbm_samples_present: "{{ samples_dir.stat.exists | default(false) }}"
+    sbm_php_soap_present: "{{ php_modules.rc == 0 }}"
