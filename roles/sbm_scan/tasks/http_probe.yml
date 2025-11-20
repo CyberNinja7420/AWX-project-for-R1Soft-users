@@ -1,0 +1,22 @@
+---
+- name: Normalize SBM base URL
+  ansible.builtin.set_fact:
+    sbm_scan_base_url: >-
+      https://{{ hostvars[inventory_hostname].sbm_host | default(ansible_host | default(inventory_hostname)) }}:{{
+        hostvars[inventory_hostname].sbm_port | default('9443')
+      }}
+
+- name: Probe login page
+  ansible.builtin.uri:
+    url: "{{ sbm_scan_base_url }}/login.zul"
+    method: GET
+    validate_certs: false
+    return_content: true
+    status_code: [200, 302]
+  register: sbm_scan_login_probe
+  failed_when: false
+
+- name: Mark HTTP reachability
+  ansible.builtin.set_fact:
+    sbm_scan_http_ok: "{{ (sbm_scan_login_probe.status in [200, 302]) | bool }}"
+    sbm_scan_login_banner: "{{ (sbm_scan_login_probe.content | default(''))[:500] }}"

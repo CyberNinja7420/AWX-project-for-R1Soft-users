@@ -1,0 +1,75 @@
+---
+- name: Remove AWX resources for sbm-user-admin
+  hosts: localhost
+  gather_facts: false
+  vars:
+    awx_org: "Default"
+    awx_inventory: "R1Soft-SBMs"
+    awx_project: "sbm-user-admin"
+    awx_credential: "SBM API (survey-driven)"
+  tasks:
+    - name: Require controller details
+      ansible.builtin.assert:
+        that:
+          - awx_host is defined and awx_host | length > 0
+          - awx_token is defined and awx_token | length > 0
+        fail_msg: "awx_host and awx_token are required (pass via -e)."
+
+    - name: Remove job template - Inventory Scan & Report (Inventory)
+      awx.awx.job_template:
+        name: "SBM – Inventory Scan & Report (Inventory)"
+        state: absent
+        controller_host: "{{ awx_host }}"
+        controller_oauthtoken: "{{ awx_token }}"
+        validate_certs: false
+
+    - name: Remove job template - Inventory Scan & Report (CSV)
+      awx.awx.job_template:
+        name: "SBM – Inventory Scan & Report (CSV)"
+        state: absent
+        controller_host: "{{ awx_host }}"
+        controller_oauthtoken: "{{ awx_token }}"
+        validate_certs: false
+
+    - name: Remove job template - Create/Ensure Power-User
+      awx.awx.job_template:
+        name: "SBM – Create/Ensure Power-User"
+        state: absent
+        controller_host: "{{ awx_host }}"
+        controller_oauthtoken: "{{ awx_token }}"
+        validate_certs: false
+
+    - name: Remove job template - Disable Power-User
+      awx.awx.job_template:
+        name: "SBM – Disable Power-User"
+        state: absent
+        controller_host: "{{ awx_host }}"
+        controller_oauthtoken: "{{ awx_token }}"
+        validate_certs: false
+
+    - name: Remove placeholder credential
+      awx.awx.credential:
+        name: "{{ awx_credential }}"
+        organization: "{{ awx_org }}"
+        state: absent
+        controller_host: "{{ awx_host }}"
+        controller_oauthtoken: "{{ awx_token }}"
+        validate_certs: false
+
+    - name: Remove project
+      awx.awx.project:
+        name: "{{ awx_project }}"
+        organization: "{{ awx_org }}"
+        state: absent
+        controller_host: "{{ awx_host }}"
+        controller_oauthtoken: "{{ awx_token }}"
+        validate_certs: false
+
+    - name: Remove inventory
+      awx.awx.inventory:
+        name: "{{ awx_inventory }}"
+        organization: "{{ awx_org }}"
+        state: absent
+        controller_host: "{{ awx_host }}"
+        controller_oauthtoken: "{{ awx_token }}"
+        validate_certs: false

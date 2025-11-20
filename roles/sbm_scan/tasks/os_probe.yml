@@ -1,0 +1,16 @@
+---
+- name: Check vendor API samples path (Linux)
+  ansible.builtin.stat:
+    path: /usr/sbin/r1soft/apisamples
+  register: sbm_scan_samples_dir
+
+- name: Check PHP SOAP module (if php exists)
+  ansible.builtin.shell: "set -o pipefail && php -m | egrep -i '(^|[[:space:]])(soap)($|[[:space:]])'"
+  register: sbm_scan_php_modules
+  changed_when: false
+  failed_when: false
+
+- name: Save OS probe facts
+  ansible.builtin.set_fact:
+    sbm_scan_samples_present: "{{ sbm_scan_samples_dir.stat.exists | default(false) }}"
+    sbm_scan_php_soap_present: "{{ sbm_scan_php_modules.rc == 0 }}"

@@ -1,0 +1,9 @@
+{
+  "name": "SBM – Inventory Scan & Report",
+  "description": "Scan SBMs for reachability, API, auth, and version hints",
+  "spec": [
+    {"question_name":"SBM API Username (default for all)","variable":"api_user","type":"text","required":false},
+    {"question_name":"SBM API Password (default for all)","variable":"api_pass","type":"password","required":false},
+    {"question_name":"CSV Path (optional)","variable":"csv_path","type":"text","default":"data/sbms.csv","required":false}
+  ]
+}

@@ -1,0 +1,25 @@
+---
+- name: Rebuild report from existing hostvars (e.g., AWX artifacts)
+  hosts: sbms
+  gather_facts: false
+  tasks:
+    - name: Ensure reports directory (controller)
+      ansible.builtin.file:
+        path: reports
+        state: directory
+      run_once: true
+      delegate_to: localhost
+    - name: Emit JSON & MD
+      block:
+        - name: Render JSON report
+          ansible.builtin.template:
+            src: "report.json.j2"
+            dest: "reports/sbm_scan_rerender.json"
+          delegate_to: localhost
+          run_once: true
+        - name: Render Markdown report
+          ansible.builtin.template:
+            src: "report.md.j2"
+            dest: "reports/sbm_scan_rerender.md"
+          delegate_to: localhost
+          run_once: true

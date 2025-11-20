@@ -3,7 +3,8 @@
     msg: "Dry run enabled; skipping API-based disable."
   when: sbm_dry_run | default(false) | bool
 
-- block:
+- when: not sbm_dry_run | default(false) | bool
+  block:
     - name: Check if user exists via SOAP API
       ansible.builtin.uri:
         url: "https://{{ ansible_host }}:{{ sbm_port | default('9443') }}/ServerBackupManager/api"
@@ -28,18 +29,18 @@
         return_content: true
         status_code: [200, 500]
         timeout: 20
-      register: sbm_user_lookup
+      register: sbm_api_direct_user_lookup
       changed_when: false
 
     - name: Determine if user is already disabled or missing
       ansible.builtin.set_fact:
-        sbm_user_missing: "{{ 'FindUserByNameResponse' not in (sbm_user_lookup.content | default('')) }}"
+        sbm_api_direct_user_missing: "{{ 'FindUserByNameResponse' not in (sbm_api_direct_user_lookup.content | default('')) }}"
       changed_when: false
 
     - name: Emit idempotent message when user missing
       ansible.builtin.debug:
         msg: "Already disabled"
-      when: sbm_user_missing | bool
+      when: sbm_api_direct_user_missing | bool
 
     - name: Disable Power-User via SOAP
       ansible.builtin.uri:
@@ -65,13 +66,12 @@
         return_content: true
         status_code: [200]
         timeout: 20
-      register: sbm_disable
+      register: sbm_api_direct_disable
       changed_when: true
-      failed_when: "'Fault' in (sbm_disable.content | default(''))"
-      when: not sbm_user_missing | bool
+      failed_when: "'Fault' in (sbm_api_direct_disable.content | default(''))"
+      when: not sbm_api_direct_user_missing | bool
 
     - name: Emit success message when disabled
       ansible.builtin.debug:
         msg: "Disabled"
-      when: not sbm_user_missing | bool
-  when: not sbm_dry_run | default(false) | bool
+      when: not sbm_api_direct_user_missing | bool

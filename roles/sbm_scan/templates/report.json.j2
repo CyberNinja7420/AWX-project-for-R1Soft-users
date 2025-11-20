@@ -1,0 +1,25 @@
+{
+  "generated_at": "{{ lookup('pipe','date -u +%Y-%m-%dT%H:%M:%SZ') }}",
+  "summary": {
+    "total": {{ groups['sbms'] | default([]) | length }},
+    "http_ok": {{ (groups['sbms'] | default([])) | map('extract', hostvars, 'sbm_scan_http_ok') | select('equalto', true) | list | length }},
+    "auth_ok": {{ (groups['sbms'] | default([])) | map('extract', hostvars, 'sbm_scan_auth_ok') | select('equalto', true) | list | length }}
+  },
+  "items": [
+  {% for h in groups['sbms'] | default([]) %}
+    {
+      "name": "{{ h }}",
+      "host": "{{ hostvars[h].sbm_host | default(hostvars[h].ansible_host | default(h)) }}",
+      "port": "{{ hostvars[h].sbm_port | default('9443') }}",
+      "site": "{{ hostvars[h].site | default('') }}",
+      "env": "{{ hostvars[h].env | default('') }}",
+      "http_ok": {{ hostvars[h].sbm_scan_http_ok | default(false) | tojson }},
+      "apidoc_ok": {{ hostvars[h].sbm_scan_apidoc_ok | default(false) | tojson }},
+      "auth_ok": {{ hostvars[h].sbm_scan_auth_ok | default(false) | tojson }},
+      "version_guess": "{{ hostvars[h].sbm_scan_version_guess | default('unknown') }}",
+      "samples_present": {{ hostvars[h].sbm_scan_samples_present | default(false) | tojson }},
+      "php_soap_present": {{ hostvars[h].sbm_scan_php_soap_present | default(false) | tojson }}
+    }{{ ',' if not loop.last }}
+  {% endfor %}
+  ]
+}

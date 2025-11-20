@@ -1,6 +1,9 @@
 # AWX will provide secrets via survey/credentials; keep defaults empty here.
 sbm_admin_user: ""
 sbm_admin_pass: ""
+sbm_api_user: ""
+sbm_api_pass: ""
+sbm_port: 9443
 
 # Behavior toggles
 use_vendor_samples: true
