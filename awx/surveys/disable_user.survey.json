@@ -1,0 +1,9 @@
+{
+  "name": "SBM – Disable Power-User",
+  "description": "Disable a Power-User (and sub-users/policies where applicable)",
+  "spec": [
+    {"question_name":"SBM Admin User","variable":"sbm_admin_user","type":"text","required":true},
+    {"question_name":"SBM Admin Password","variable":"sbm_admin_pass","type":"password","required":true},
+    {"question_name":"Target Username","variable":"sbm_target_user.username","type":"text","required":true}
+  ]
+}
