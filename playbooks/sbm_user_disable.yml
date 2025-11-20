@@ -1,13 +1,9 @@
 - name: Disable SBM Power-User (vendor sample + wrapper or pure API)
   hosts: sbms
   gather_facts: false
-  collections:
-    - ansible.builtin
-    - community.general
-    - awx.awx
   vars:
     ansible_become: true
-    use_vendor_samples: true
+    sbm_api_samples_use_vendor_samples: true
     sbm_dry_run: false
   pre_tasks:
     - name: Run SBM preflight
@@ -20,10 +16,10 @@
       ansible.builtin.include_role:
         name: sbm_api_samples
         tasks_from: disable_power_user.yml
-      when: use_vendor_samples | bool
+      when: sbm_api_samples_use_vendor_samples | bool
 
     - name: Use pure API path
       ansible.builtin.include_role:
         name: sbm_api_direct
         tasks_from: disable_user.yml
-      when: not use_vendor_samples | bool
+      when: not sbm_api_samples_use_vendor_samples | bool

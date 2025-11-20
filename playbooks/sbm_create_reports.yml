@@ -41,27 +41,39 @@
 
   tasks:
     - name: Derive target report list
-      set_fact:
+      ansible.builtin.set_fact:
         target_reports: >-
           {{ (report_type == 'all') | ternary(report_definitions.keys() | list, [report_type]) }}
 
     - name: Validate requested report type
-      fail:
+      ansible.builtin.fail:
         msg: "Unsupported report_type '{{ report_type }}'. Valid options: {{ report_definitions.keys() | join(', ') }}, all"
       when: target_reports | difference(report_definitions.keys() | list)
 
     - name: Display target reports
-      debug:
+      ansible.builtin.debug:
         msg: "Creating reports: {{ target_reports | join(', ') }}"
 
     - name: Build SOAP payloads for requested reports
-      set_fact:
+      ansible.builtin.set_fact:
         report_payloads: >-
-          {{ report_payloads | default({}) | combine({item: lookup('template', 'templates/create_report.xml.j2', convert_data=False, vars={'report': report_definitions[item], 'sbm_host': inventory_hostname, 'schedule_time': report_definitions[item].schedule_time, 'recipients': sbm_report_recipients})}) }}
+          {{ report_payloads | default({}) | combine({
+            item: lookup(
+              'template',
+              'templates/create_report.xml.j2',
+              convert_data=False,
+              vars={
+                'report': report_definitions[item],
+                'sbm_host': inventory_hostname,
+                'schedule_time': report_definitions[item].schedule_time,
+                'recipients': sbm_report_recipients
+              }
+            )
+          }) }}
       loop: "{{ target_reports }}"
 
     - name: Create reports using SOAP API
-      uri:
+      ansible.builtin.uri:
         url: "{{ sbm_api_scheme }}://{{ inventory_hostname }}:{{ sbm_api_port }}/Reporting"
         method: POST
         user: "{{ sbm_api_user }}"
@@ -83,10 +95,9 @@
       no_log: true
 
     - name: Summarize report creation results
-      debug:
+      ansible.builtin.debug:
         msg: "Created '{{ report_definitions[item].name }}' on {{ inventory_hostname }} (status: {{ create_reports_results.results[loop.index0].status }})"
       loop: "{{ target_reports }}"
       loop_control:
         label: "{{ report_definitions[item].name }}"
       when: create_reports_results is defined
-
