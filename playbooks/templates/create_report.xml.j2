@@ -1,0 +1,34 @@
+{% set time_parts = schedule_time.split(':') %}
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:rep="http://reporting.server.backup.r1soft.com/">
+  <soapenv:Header/>
+  <soapenv:Body>
+    <rep:createReport>
+      <report>
+        <name>{{ report.name }}</name>
+        <enabled>true</enabled>
+        <subject>{{ report.subject }}</subject>
+        <fromAddress>noreply@{{ sbm_host }}</fromAddress>
+        <sendIndividualEmails>true</sendIndividualEmails>
+        <sendIfEmpty>false</sendIfEmpty>
+        <includeFullAlertDetails>false</includeFullAlertDetails>
+        <schedule>
+          <type>DAILY</type>
+          <timeOfDay>
+            <hour>{{ time_parts[0] }}</hour>
+            <minute>{{ time_parts[1] }}</minute>
+          </timeOfDay>
+        </schedule>
+        <taskWithAlertsFilter>{{ (report.task_with_alerts | default(false)) | string | lower }}</taskWithAlertsFilter>
+        <taskTypeFilterList>
+          {% for t in report.task_types %}<taskTypeFilter>{{ t }}</taskTypeFilter>{% endfor %}
+        </taskTypeFilterList>
+        <taskStateFilterList>
+          {% for s in report.task_states %}<taskStateFilter>{{ s }}</taskStateFilter>{% endfor %}
+        </taskStateFilterList>
+        <recipientEmailAddressList>
+          {% for rcpt in recipients %}<emailAddress>{{ rcpt }}</emailAddress>{% endfor %}
+        </recipientEmailAddressList>
+      </report>
+    </rep:createReport>
+  </soapenv:Body>
+</soapenv:Envelope>

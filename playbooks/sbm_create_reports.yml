@@ -1,0 +1,92 @@
+---
+- name: Create R1Soft SBM reports via SOAP API
+  hosts: sbm_servers
+  connection: local
+  gather_facts: false
+  vars:
+    sbm_api_port: 9443
+    sbm_api_scheme: https
+    sbm_api_validate_certs: false
+    report_type: all
+    sbm_report_recipients: ["backup-ops@example.com"]
+    report_definitions:
+      backup_status:
+        name: "Backup Status Report"
+        subject: "R1Soft Backup Status"
+        schedule_time: "08:00"
+        task_types: ["BACKUP"]
+        task_states: ["FAILED", "CANCELED"]
+        task_with_alerts: true
+      retention_logs:
+        name: "Retention / Merge Report"
+        subject: "R1Soft Retention / Merge"
+        schedule_time: "09:00"
+        task_types: ["MERGE", "RETENTION"]
+        task_states: ["FINISHED", "FAILED"]
+        task_with_alerts: false
+      replication:
+        name: "Replication Status Report"
+        subject: "R1Soft Replication"
+        schedule_time: "10:00"
+        task_types: ["REPLICATION"]
+        task_states: ["FINISHED", "FAILED", "CANCELED"]
+        task_with_alerts: false
+      policy_run_history:
+        name: "Policy Run History"
+        subject: "R1Soft Policy Run History"
+        schedule_time: "11:00"
+        task_types: ["BACKUP"]
+        task_states: ["FINISHED", "FAILED", "CANCELED"]
+        task_with_alerts: false
+
+  tasks:
+    - name: Derive target report list
+      set_fact:
+        target_reports: >-
+          {{ (report_type == 'all') | ternary(report_definitions.keys() | list, [report_type]) }}
+
+    - name: Validate requested report type
+      fail:
+        msg: "Unsupported report_type '{{ report_type }}'. Valid options: {{ report_definitions.keys() | join(', ') }}, all"
+      when: target_reports | difference(report_definitions.keys() | list)
+
+    - name: Display target reports
+      debug:
+        msg: "Creating reports: {{ target_reports | join(', ') }}"
+
+    - name: Build SOAP payloads for requested reports
+      set_fact:
+        report_payloads: >-
+          {{ report_payloads | default({}) | combine({item: lookup('template', 'templates/create_report.xml.j2', convert_data=False, vars={'report': report_definitions[item], 'sbm_host': inventory_hostname, 'schedule_time': report_definitions[item].schedule_time, 'recipients': sbm_report_recipients})}) }}
+      loop: "{{ target_reports }}"
+
+    - name: Create reports using SOAP API
+      uri:
+        url: "{{ sbm_api_scheme }}://{{ inventory_hostname }}:{{ sbm_api_port }}/Reporting"
+        method: POST
+        user: "{{ sbm_api_user }}"
+        password: "{{ sbm_api_pass }}"
+        force_basic_auth: true
+        headers:
+          Content-Type: "text/xml; charset=utf-8"
+          SOAPAction: "createReport"
+        body: "{{ report_payloads[item] }}"
+        body_format: raw
+        status_code: 200
+        validate_certs: "{{ sbm_api_validate_certs }}"
+        return_content: true
+        timeout: 30
+      loop: "{{ target_reports }}"
+      loop_control:
+        label: "{{ report_definitions[item].name }}"
+      register: create_reports_results
+      no_log: true
+
+    - name: Summarize report creation results
+      debug:
+        msg: "Created '{{ report_definitions[item].name }}' on {{ inventory_hostname }} (status: {{ create_reports_results.results[loop.index0].status }})"
+      loop: "{{ target_reports }}"
+      loop_control:
+        label: "{{ report_definitions[item].name }}"
+      when: create_reports_results is defined
+
