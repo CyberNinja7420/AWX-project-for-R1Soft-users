@@ -1,35 +1,35 @@
 ---
 - name: Probe /apidoc (API browser)
-  uri:
-    url: "{{ sbm_base_url }}/apidoc"
+  ansible.builtin.uri:
+    url: "{{ sbm_scan_base_url }}/apidoc"
     method: GET
     validate_certs: false
     status_code: 200
-  register: apidoc_probe
+  register: sbm_scan_apidoc_probe
   failed_when: false
 
 - name: Attempt authenticated call to /User/ (auth check only)
-  uri:
-    url: "{{ sbm_base_url }}/User/"
+  ansible.builtin.uri:
+    url: "{{ sbm_scan_base_url }}/User/"
     method: GET
     validate_certs: false
     force_basic_auth: true
     url_username: "{{ sbm_api_user | default(api_user | default('')) }}"
     url_password: "{{ sbm_api_pass | default(api_pass | default('')) }}"
-    status_code: [200,401]
-  register: user_probe
+    status_code: [200, 401]
+  register: sbm_scan_user_probe
   failed_when: false
 
 - name: Guess version from headers/content (best-effort)
-  set_fact:
-    sbm_version_guess: >-
+  ansible.builtin.set_fact:
+    sbm_scan_version_guess: >-
       {{
-        (login_probe.content | default('')) | regex_search('Server\\s*Backup\\s*Manager\\s*v?([0-9.]+)', '\\1')
+        (sbm_scan_login_probe.content | default('')) | regex_search('Server\\s*Backup\\s*Manager\\s*v?([0-9.]+)', '\\1')
         | default(
-            (apidoc_probe.content | default('')) | regex_search('Version[:\\s]+([0-9.]+)', '\\1'),
+            (sbm_scan_apidoc_probe.content | default('')) | regex_search('Version[:\\s]+([0-9.]+)', '\\1'),
             true
           )
         | default('unknown', true)
       }}
-    sbm_auth_ok: "{{ user_probe.status == 200 }}"
-    sbm_apidoc_ok: "{{ apidoc_probe.status == 200 }}"
+    sbm_scan_auth_ok: "{{ sbm_scan_user_probe.status == 200 }}"
+    sbm_scan_apidoc_ok: "{{ sbm_scan_apidoc_probe.status == 200 }}"

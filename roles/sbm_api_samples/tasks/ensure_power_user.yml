@@ -3,7 +3,8 @@
     msg: "Dry run enabled; skipping user create/ensure."
   when: sbm_dry_run | default(false) | bool
 
-- block:
+- when: not sbm_dry_run | default(false) | bool
+  block:
     - name: Deploy wrapper to include vendor sample for create/ensure
       ansible.builtin.template:
         src: wrappers/create_power_user_wrapper.php.j2
@@ -13,12 +14,11 @@
 
     - name: Execute create/ensure wrapper
       ansible.builtin.command: php /root/awx-sbm-create-power-user.php
-      register: create_out
-      changed_when: "'successfully created power user' in (create_out.stdout | lower)"
-      failed_when: "create_out.rc != 0 and 'already exists' not in (create_out.stdout | lower)"
+      register: sbm_api_samples_create_out
+      changed_when: "'successfully created power user' in (sbm_api_samples_create_out.stdout | lower)"
+      failed_when: "sbm_api_samples_create_out.rc != 0 and 'already exists' not in (sbm_api_samples_create_out.stdout | lower)"
       become: true
 
     - name: Show create output
       ansible.builtin.debug:
-        var: create_out.stdout_lines
-  when: not sbm_dry_run | default(false) | bool
+        var: sbm_api_samples_create_out.stdout_lines

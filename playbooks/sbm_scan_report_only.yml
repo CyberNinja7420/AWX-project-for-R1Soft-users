@@ -4,19 +4,21 @@
   gather_facts: false
   tasks:
     - name: Ensure reports directory (controller)
-      file:
+      ansible.builtin.file:
         path: reports
         state: directory
       run_once: true
       delegate_to: localhost
     - name: Emit JSON & MD
       block:
-        - template:
+        - name: Render JSON report
+          ansible.builtin.template:
             src: "report.json.j2"
             dest: "reports/sbm_scan_rerender.json"
           delegate_to: localhost
           run_once: true
-        - template:
+        - name: Render Markdown report
+          ansible.builtin.template:
             src: "report.md.j2"
             dest: "reports/sbm_scan_rerender.md"
           delegate_to: localhost

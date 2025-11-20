@@ -6,20 +6,20 @@
     - sbm_scan
   post_tasks:
     - name: Ensure reports directory (controller)
-      file:
+      ansible.builtin.file:
         path: reports
         state: directory
       run_once: true
       delegate_to: localhost
     - name: Build consolidated JSON report (controller)
-      template:
+      ansible.builtin.template:
         src: "report.json.j2"
-        dest: "reports/sbm_scan_{{ lookup('pipe','date -u +%Y%m%dT%H%M%SZ') }}.json"
+        dest: "reports/sbm_scan_{{ lookup('pipe', 'date -u +%Y%m%dT%H%M%SZ') }}.json"
       run_once: true
       delegate_to: localhost
     - name: Build consolidated Markdown report (controller)
-      template:
+      ansible.builtin.template:
         src: "report.md.j2"
-        dest: "reports/sbm_scan_{{ lookup('pipe','date -u +%Y%m%dT%H%M%SZ') }}.md"
+        dest: "reports/sbm_scan_{{ lookup('pipe', 'date -u +%Y%m%dT%H%M%SZ') }}.md"
       run_once: true
       delegate_to: localhost

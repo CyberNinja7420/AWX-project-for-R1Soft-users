@@ -7,27 +7,27 @@
     follow_redirects: all
     status_code: [200, 301, 302, 401]
     timeout: 15
-  register: sbm_http_check
+  register: sbm_api_samples_http_check
   changed_when: false
 
 - name: Detect SBM version from response
   ansible.builtin.set_fact:
-    sbm_version: "{{ (sbm_http_check.content | regex_search('Server Backup Manager[^0-9]*([0-9.]+)', '\\1')) | default('', true) }}"
+    sbm_api_samples_version: "{{ (sbm_api_samples_http_check.content | regex_search('Server Backup Manager[^0-9]*([0-9.]+)', '\\1')) | default('', true) }}"
   changed_when: false
 
 - name: Warn when SBM version not detected
   ansible.builtin.debug:
     msg: "Could not detect SBM version from HTTPS response; continuing with defaults."
     verbosity: 1
-  when: sbm_version | default('') == ''
+  when: sbm_api_samples_version | default('') == ''
 
 - name: Warn when DCC requested on deprecated versions
   ansible.builtin.debug:
-    msg: "DCC features are deprecated; requested enablement on SBM {{ sbm_version | default('unknown') }}. Proceeding with warning only."
+    msg: "DCC features are deprecated; requested enablement on SBM {{ sbm_api_samples_version | default('unknown') }}. Proceeding with warning only."
     warn: true
   when:
     - enable_dcc | default(false) | bool
-    - sbm_version is version('6.18', '<')
+    - sbm_api_samples_version is version('6.18', '<')
 
 - name: Gather package facts
   ansible.builtin.package_facts:
@@ -44,7 +44,7 @@
 - name: Verify vendor API samples exist
   ansible.builtin.stat:
     path: /usr/sbin/r1soft/apisamples
-  register: sbm_samples_path
+  register: sbm_api_samples_path
   when: use_vendor_samples | default(true) | bool
 
 - name: Abort if samples are missing
@@ -52,7 +52,7 @@
     msg: "R1Soft API samples missing at /usr/sbin/r1soft/apisamples on {{ inventory_hostname }}"
   when:
     - use_vendor_samples | default(true) | bool
-    - not sbm_samples_path.stat.exists
+    - not sbm_api_samples_path.stat.exists
 
 - name: Note dry-run status
   ansible.builtin.debug:

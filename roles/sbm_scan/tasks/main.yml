@@ -1,11 +1,11 @@
 ---
 - name: Include HTTP reachability checks
-  include_tasks: http_probe.yml
+  ansible.builtin.include_tasks: http_probe.yml
 
 - name: Include API auth + feature checks
-  include_tasks: api_probe.yml
-  when: sbm_http_ok | default(false)
+  ansible.builtin.include_tasks: api_probe.yml
+  when: sbm_scan_http_ok | default(false)
 
 - name: Include optional OS-level probe if SSH vars exist
-  include_tasks: os_probe.yml
+  ansible.builtin.include_tasks: os_probe.yml
   when: ansible_user is defined or (hostvars[inventory_hostname] | dict2items | selectattr('key','match','^ansible_') | list | length) > 0
