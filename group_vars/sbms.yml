@@ -1,0 +1,17 @@
+# AWX will provide secrets via survey/credentials; keep defaults empty here.
+sbm_admin_user: ""
+sbm_admin_pass: ""
+
+# Default target user for tests; override via AWX survey
+sbm_target_user:
+  username: "backupops"
+  password: "CHANGE_ME"    # or leave blank when using LDAP-backed users
+  email: "backupops@example.com"
+  full_name: "Backup Ops"
+  allow_subusers: true
+
+# Placeholder volume values (some vendor samples require a volume during user bootstrap)
+volume_name: "awx_user_bootstrap"
+volume_path: "/var/r1soft/awx_bootstrap"
+quota_soft: 1000000
+quota_hard: 2000000

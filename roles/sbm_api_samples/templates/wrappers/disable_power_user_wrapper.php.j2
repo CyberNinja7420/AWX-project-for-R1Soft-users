@@ -1,0 +1,15 @@
+<?php
+// Wrapper that sets variables then includes the vendor's disable sample.
+// Adjust included filename if your sample differs.
+
+$HOST = "{{ ansible_host }}";
+$PORT = "{{ sbm_port | default('9443') }}";
+$USER = "{{ sbm_admin_user }}";
+$PASS = "{{ sbm_admin_pass }}";
+
+$TARGET_USERNAME = "{{ sbm_target_user.username }}";
+
+// A generic "disable power user and sub-users" sample filename; adjust to actual path if needed:
+@include('/usr/sbin/r1soft/apisamples/Disable_Power_User_And_Subusers.php');
+
+echo "Disable invoked\n";

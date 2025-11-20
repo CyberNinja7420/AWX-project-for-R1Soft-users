@@ -1,0 +1,15 @@
+{
+  "name": "SBM – Create/Ensure Power-User",
+  "description": "Create or update a Power-User on selected SBM",
+  "spec": [
+    {"question_name":"SBM Admin User","variable":"sbm_admin_user","type":"text","required":true},
+    {"question_name":"SBM Admin Password","variable":"sbm_admin_pass","type":"password","required":true},
+    {"question_name":"Target Username","variable":"sbm_target_user.username","type":"text","required":true},
+    {"question_name":"Target Password (leave blank if LDAP)","variable":"sbm_target_user.password","type":"password","required":false},
+    {"question_name":"Full Name","variable":"sbm_target_user.full_name","type":"text","required":true},
+    {"question_name":"Email","variable":"sbm_target_user.email","type":"text","required":true},
+    {"question_name":"Allow Sub-Users","variable":"sbm_target_user.allow_subusers","type":"multiplechoice","choices":["true","false"],"default":"true","required":true},
+    {"question_name":"Volume Name","variable":"volume_name","type":"text","default":"awx_user_bootstrap","required":true},
+    {"question_name":"Volume Path","variable":"volume_path","type":"text","default":"/var/r1soft/awx_bootstrap","required":true}
+  ]
+}

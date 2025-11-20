@@ -1,0 +1,16 @@
+- name: Deploy wrapper to include vendor sample for create/ensure
+  template:
+    src: wrappers/create_power_user_wrapper.php.j2
+    dest: /root/awx-sbm-create-power-user.php
+    mode: "0700"
+  become: true
+
+- name: Execute create/ensure wrapper
+  command: php /root/awx-sbm-create-power-user.php
+  register: create_out
+  changed_when: "'Successfully created power user' in create_out.stdout"
+  failed_when: "create_out.rc != 0 and 'already exists' not in (create_out.stdout | lower)"
+  become: true
+
+- debug:
+    var: create_out.stdout_lines
