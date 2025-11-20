@@ -52,13 +52,24 @@ if ($alreadyExists) {
   exit(0);
 }
 
-// Include the vendor sample that creates a Volume + Power-User (+ Agent)
-// If your environment uses the "No Sub-Users" variant, switch the filename accordingly.
-@include('/usr/sbin/r1soft/apisamples/Volumes_With_Limits_Power_User_With_Sub_User_Allowed.php');
+$candidates = [
+  '/usr/sbin/r1soft/apisamples/Volumes_With_Limits_Power_User_With_Sub_User_Allowed.php',
+  '/usr/sbin/r1soft/apisamples/Create_Volume_Power_User_With_SubUsers.php',
+  '/usr/sbin/r1soft/apisamples/CreateVolumeAndPowerUser.php'
+];
 
-if (!isset($php_errormsg)) {
-  echo "Successfully created power user\n";
-} else {
-  echo "Failed to create power user: {$php_errormsg}\n";
+$ok = false;
+foreach ($candidates as $f) {
+  if (file_exists($f)) {
+    include($f);
+    $ok = true;
+    break;
+  }
+}
+
+if (!$ok) {
+  fwrite(STDERR, "No vendor sample found for Power-User creation\n");
   exit(1);
 }
+
+echo "Successfully created power user\n";

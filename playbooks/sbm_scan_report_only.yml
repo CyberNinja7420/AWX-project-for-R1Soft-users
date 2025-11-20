@@ -2,6 +2,10 @@
 - name: Rebuild report from existing hostvars (e.g., AWX artifacts)
   hosts: sbms
   gather_facts: false
+  collections:
+    - ansible.builtin
+    - community.general
+    - awx.awx
   tasks:
     - name: Ensure reports directory (controller)
       ansible.builtin.file:

@@ -8,4 +8,4 @@
 
 - name: Include optional OS-level probe if SSH vars exist
   ansible.builtin.include_tasks: os_probe.yml
-  when: ansible_user is defined or (hostvars[inventory_hostname] | dict2items | selectattr('key','match','^ansible_') | list | length) > 0
+  when: "'ansible_user' in hostvars[inventory_hostname] or 'ansible_ssh_user' in hostvars[inventory_hostname]"

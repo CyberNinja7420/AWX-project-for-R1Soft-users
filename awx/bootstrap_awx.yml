@@ -2,18 +2,24 @@
 - name: Bootstrap AWX objects for sbm-user-admin
   hosts: localhost
   gather_facts: false
+  collections:
+    - ansible.builtin
+    - community.general
+    - awx.awx
   vars:
     awx_org: "Default"
     awx_inventory: "R1Soft-SBMs"
     awx_project: "sbm-user-admin"
     awx_credential: "SBM API (survey-driven)"
     project_repo_url: ""
+    _awx_host: "{{ awx_host | default(tower_host | default('')) }}"
+    _awx_token: "{{ awx_token | default(tower_oauthtoken | default('')) }}"
   tasks:
     - name: Require controller details and repo URL
       ansible.builtin.assert:
         that:
-          - awx_host is defined and awx_host | length > 0
-          - awx_token is defined and awx_token | length > 0
+          - _awx_host | length > 0
+          - _awx_token | length > 0
           - project_repo_url | length > 0
         fail_msg: "awx_host, awx_token, and project_repo_url are required (pass via -e)."
 
@@ -24,16 +30,16 @@
         scm_type: git
         scm_url: "{{ project_repo_url }}"
         scm_branch: main
-        controller_host: "{{ awx_host }}"
-        controller_oauthtoken: "{{ awx_token }}"
+        controller_host: "{{ _awx_host }}"
+        controller_oauthtoken: "{{ _awx_token }}"
         validate_certs: false
 
     - name: Ensure Inventory
       awx.awx.inventory:
         name: "{{ awx_inventory }}"
         organization: "{{ awx_org }}"
-        controller_host: "{{ awx_host }}"
-        controller_oauthtoken: "{{ awx_token }}"
+        controller_host: "{{ _awx_host }}"
+        controller_oauthtoken: "{{ _awx_token }}"
         validate_certs: false
 
     - name: Create placeholder credential (no secrets stored)
@@ -42,8 +48,8 @@
         organization: "{{ awx_org }}"
         credential_type: Machine
         inputs: {}
-        controller_host: "{{ awx_host }}"
-        controller_oauthtoken: "{{ awx_token }}"
+        controller_host: "{{ _awx_host }}"
+        controller_oauthtoken: "{{ _awx_token }}"
         validate_certs: false
 
     - name: Load surveys
@@ -63,8 +69,8 @@
         survey_enabled: true
         survey_spec: "{{ survey_scan }}"
         verbosity: 1
-        controller_host: "{{ awx_host }}"
-        controller_oauthtoken: "{{ awx_token }}"
+        controller_host: "{{ _awx_host }}"
+        controller_oauthtoken: "{{ _awx_token }}"
         validate_certs: false
 
     - name: Ensure JT - Inventory Scan & Report (CSV)
@@ -78,8 +84,8 @@
         survey_enabled: true
         survey_spec: "{{ survey_scan }}"
         verbosity: 1
-        controller_host: "{{ awx_host }}"
-        controller_oauthtoken: "{{ awx_token }}"
+        controller_host: "{{ _awx_host }}"
+        controller_oauthtoken: "{{ _awx_token }}"
         validate_certs: false
 
     - name: Ensure JT - Create/Ensure Power-User
@@ -93,8 +99,8 @@
         survey_enabled: true
         survey_spec: "{{ survey_create }}"
         verbosity: 1
-        controller_host: "{{ awx_host }}"
-        controller_oauthtoken: "{{ awx_token }}"
+        controller_host: "{{ _awx_host }}"
+        controller_oauthtoken: "{{ _awx_token }}"
         validate_certs: false
 
     - name: Ensure JT - Disable Power-User
@@ -108,6 +114,6 @@
         survey_enabled: true
         survey_spec: "{{ survey_disable }}"
         verbosity: 1
-        controller_host: "{{ awx_host }}"
-        controller_oauthtoken: "{{ awx_token }}"
+        controller_host: "{{ _awx_host }}"
+        controller_oauthtoken: "{{ _awx_token }}"
         validate_certs: false

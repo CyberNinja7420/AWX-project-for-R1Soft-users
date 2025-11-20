@@ -44,7 +44,24 @@ if ($alreadyDisabled) {
   exit(0);
 }
 
-// A generic "disable power user and sub-users" sample filename; adjust to actual path if needed:
-@include('/usr/sbin/r1soft/apisamples/Disable_Power_User_And_Subusers.php');
+$candidates = [
+  '/usr/sbin/r1soft/apisamples/Disable_Power_User_And_Subusers.php',
+  '/usr/sbin/r1soft/apisamples/DisablePowerUserAndSubUsers.php',
+  '/usr/sbin/r1soft/apisamples/Disable_Power_User.php'
+];
 
-echo "Disabled\n";
+$ok = false;
+foreach ($candidates as $f) {
+  if (file_exists($f)) {
+    include($f);
+    $ok = true;
+    break;
+  }
+}
+
+if (!$ok) {
+  fwrite(STDERR, "No vendor sample found for Power-User disable\n");
+  exit(1);
+}
+
+echo "Successfully disabled power user\n";

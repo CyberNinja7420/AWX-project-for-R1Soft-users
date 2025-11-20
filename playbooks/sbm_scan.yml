@@ -2,6 +2,10 @@
 - name: Scan all SBM managers in inventory
   hosts: sbms
   gather_facts: false
+  collections:
+    - ansible.builtin
+    - community.general
+    - awx.awx
   roles:
     - sbm_scan
   post_tasks:
@@ -11,15 +15,28 @@
         state: directory
       run_once: true
       delegate_to: localhost
+    - name: Set report timestamp (controller)
+      ansible.builtin.set_fact:
+        report_ts: "{{ lookup('pipe', 'date -u +%Y%m%dT%H%M%SZ') }}"
+      run_once: true
+      delegate_to: localhost
+      delegate_facts: true
     - name: Build consolidated JSON report (controller)
       ansible.builtin.template:
         src: "report.json.j2"
-        dest: "reports/sbm_scan_{{ lookup('pipe', 'date -u +%Y%m%dT%H%M%SZ') }}.json"
+        dest: "reports/sbm_scan_{{ report_ts }}.json"
+      run_once: true
+      delegate_to: localhost
+    - name: Publish JSON report artifact (AWX controller)
+      ansible.builtin.set_stats:
+        data:
+          artifacts:
+            sbm_scan_json: "reports/sbm_scan_{{ report_ts }}.json"
       run_once: true
       delegate_to: localhost
     - name: Build consolidated Markdown report (controller)
       ansible.builtin.template:
         src: "report.md.j2"
-        dest: "reports/sbm_scan_{{ lookup('pipe', 'date -u +%Y%m%dT%H%M%SZ') }}.md"
+        dest: "reports/sbm_scan_{{ report_ts }}.md"
       run_once: true
       delegate_to: localhost
