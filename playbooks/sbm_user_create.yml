@@ -3,7 +3,6 @@
   gather_facts: false
   vars:
     ansible_become: true
-    sbm_api_samples_use_vendor_samples: true
     sbm_dry_run: false
   pre_tasks:
     - name: Run SBM preflight
