@@ -68,6 +68,12 @@ AWX/Ansible content to scan Server Backup Manager (SBM) inventories, render repo
 - `.github/workflows/ci.yml` – lint and syntax-check automation.
 
 ## CI and linting
+GitHub Actions runs `make lint` (yamllint + ansible-lint) followed by `make syntax-check` (Ansible syntax-check for inventory and CSV scan playbooks). Locally you can invoke the individual targets or the conventional wrappers:
+```bash
+make lint            # lint only
+make syntax-check    # Ansible syntax checks
+make test            # lint + syntax-check (alias: make all)
+make clean           # delete generated reports and .retry files
 GitHub Actions runs `make lint` (yamllint + ansible-lint) followed by `make syntax-check` (Ansible syntax-check for inventory and CSV scan playbooks). Locally:
 ```bash
 make lint

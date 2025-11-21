@@ -1,4 +1,11 @@
-.PHONY: lint scan scan_csv bootstrap_awx syntax-check
+.PHONY: all clean lint scan scan_csv bootstrap_awx syntax-check
+
+all: lint syntax-check
+
+test: lint syntax-check
+
+clean:
+	rm -f reports/*.json reports/*.md *.retry
 
 lint:
 	@if [ "${SKIP_GALAXY_INSTALL}" != "1" ]; then \
