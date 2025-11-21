@@ -43,7 +43,14 @@
 
 - name: Normalize vendor sample flag
   ansible.builtin.set_fact:
-    sbm_api_samples_use_vendor_samples: "{{ use_vendor_samples | default(sbm_api_samples_use_vendor_samples | default(true)) }}"
+    sbm_api_samples_use_vendor_samples: >-
+      {{
+        sbm_api_samples_use_vendor_samples
+          if sbm_api_samples_use_vendor_samples is defined
+          else use_vendor_samples
+          if use_vendor_samples is defined
+          else true
+      }}
   changed_when: false
 
 - name: Verify vendor API samples exist
