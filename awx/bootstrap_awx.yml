@@ -2,10 +2,6 @@
 - name: Bootstrap AWX objects for sbm-user-admin
   hosts: localhost
   gather_facts: false
-  collections:
-    - ansible.builtin
-    - community.general
-    - awx.awx
   vars:
     awx_org: "Default"
     awx_inventory: "R1Soft-SBMs"
@@ -53,10 +49,10 @@
         validate_certs: false
 
     - name: Load surveys
-      set_fact:
-        survey_scan: "{{ lookup('file','awx/surveys/sbm_scan.survey.json') | from_json }}"
-        survey_create: "{{ lookup('file','awx/surveys/create_user.survey.json') | from_json }}"
-        survey_disable: "{{ lookup('file','awx/surveys/disable_user.survey.json') | from_json }}"
+      ansible.builtin.set_fact:
+        survey_scan: "{{ lookup('file', 'awx/surveys/sbm_scan.survey.json') | from_json }}"
+        survey_create: "{{ lookup('file', 'awx/surveys/create_user.survey.json') | from_json }}"
+        survey_disable: "{{ lookup('file', 'awx/surveys/disable_user.survey.json') | from_json }}"
 
     - name: Ensure JT - Inventory Scan & Report (Inventory)
       awx.awx.job_template:

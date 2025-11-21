@@ -2,10 +2,6 @@
 - name: Onboard SBMs into AWX Inventory from CSV
   hosts: localhost
   gather_facts: false
-  collections:
-    - ansible.builtin
-    - community.general
-    - awx.awx
   vars:
     csv_path: "data/sbms.csv"
     awx_inventory: "R1Soft-SBMs"

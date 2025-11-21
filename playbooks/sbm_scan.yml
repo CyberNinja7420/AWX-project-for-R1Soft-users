@@ -11,12 +11,12 @@
         path: reports
         state: directory
         mode: "0755"
-      run_once: true
+      run_once: true  # noqa run-once[task]
       delegate_to: localhost
     - name: Set report timestamp (controller)
       ansible.builtin.set_fact:
         report_ts: "{{ lookup('pipe', 'date -u +%Y%m%dT%H%M%SZ') }}"
-      run_once: true
+      run_once: true  # noqa run-once[task]
       delegate_to: localhost
       delegate_facts: true
     - name: Build consolidated JSON report (controller)
@@ -24,19 +24,19 @@
         src: "report.json.j2"
         dest: "reports/sbm_scan_{{ report_ts }}.json"
         mode: "0644"
-      run_once: true
+      run_once: true  # noqa run-once[task]
       delegate_to: localhost
     - name: Publish JSON report artifact (AWX controller)
       ansible.builtin.set_stats:
         data:
           artifacts:
             sbm_scan_json: "reports/sbm_scan_{{ report_ts }}.json"
-      run_once: true
+      run_once: true  # noqa run-once[task]
       delegate_to: localhost
     - name: Build consolidated Markdown report (controller)
       ansible.builtin.template:
         src: "report.md.j2"
         dest: "reports/sbm_scan_{{ report_ts }}.md"
         mode: "0644"
-      run_once: true
+      run_once: true  # noqa run-once[task]
       delegate_to: localhost
