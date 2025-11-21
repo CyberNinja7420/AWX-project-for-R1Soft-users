@@ -8,9 +8,7 @@ AWX/Ansible content to scan Server Backup Manager (SBM) inventories, render repo
   - `playbooks/sbm_scan.yml` (Path A): scan hosts already present in the `sbms` group.
   - `playbooks/sbm_scan_from_csv.yml` (Path B): build an in-memory `sbms` group from CSV, then scan.
   - `playbooks/sbm_scan_report_only.yml`: regenerate JSON/Markdown reports from existing host vars (useful for AWX artifacts).
-- Reports render to `reports/` as `sbm_scan_<UTC>.json` and `.md` using templates in `roles/sbm_scan/templates/`; JSON is also pu
-blished to AWX artifacts for download.
-
+- Reports render to `reports/` as `sbm_scan_<UTC>.json` and `.md` using templates in `roles/sbm_scan/templates/`; each run keeps both files on the controller and also publishes the JSON path as an AWX artifact for download.
 ## CSV Onboarding
 - Sample `data/sbms.csv` demonstrates the header `name,host,port,site,env,api_user,api_pass_var,dcc_url` with placeholder rows.
 - `playbooks/sbm_scan_from_csv.yml` reads the CSV and builds in-memory inventory; `awx/onboard_sbms_from_csv.yml` can mirror the CSV into an AWX inventory.
@@ -54,6 +52,11 @@ blished to AWX artifacts for download.
 - HTTPS certificate validation is disabled in probes/bootstraps for compatibility; prefer trusted certs in production.
 - Keep Vault variables or AWX credential injection for API passwords referenced by `api_pass_var` in CSV rows.
 
+## Defaults and placeholders
+- `group_vars/sbms.yml` ships empty admin/API credentials, `CHANGE_ME` defaults for the target user password, LDAP blanks, and placeholder volume values. Override these via AWX surveys, extra vars, or inventory vars before running against real systems.
+- `inventories/sbms.yml` contains an RFC 5737 example host and sample metadata; replace with real endpoints for production.
+- `data/sbms.csv` is populated with placeholder rows; swap in your onboarding CSV (and related Vault or AWX credential references) before live use.
+
 ## Layout
 - `inventories/` – example inventory for SBM endpoints.
 - `group_vars/` – defaults for target users, ports, LDAP settings, and scanner defaults.
@@ -62,12 +65,15 @@ blished to AWX artifacts for download.
 - `roles/sbm_api_samples/` / `roles/sbm_api_direct/` – Power-User automation implementations.
 - `awx/` – surveys and AWX IaC plays (bootstrap, onboarding from CSV, destroy).
 - `docs/` – research notes, test plans, and results.
-- `.github/workflows/ci.yml` – lint automation.
+- `.github/workflows/ci.yml` – lint and syntax-check automation.
 
 ## CI and linting
-GitHub Actions runs `make lint` (yamllint + ansible-lint). Locally:
+GitHub Actions runs `make lint` (yamllint + ansible-lint) followed by `make syntax-check` (Ansible syntax-check for inventory and CSV scan playbooks). Locally you can invoke the individual targets or the conventional wrappers:
 ```bash
-make lint
+make lint            # lint only
+make syntax-check    # Ansible syntax checks
+make test            # lint + syntax-check (alias: make all)
+make clean           # delete generated reports and .retry files
 ```
 
 The repository ships `ansible.cfg` with YAML callbacks, disabled SSH host-key prompts (for labs), retry files disabled, and a `.g

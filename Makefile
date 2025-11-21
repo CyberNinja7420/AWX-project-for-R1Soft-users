@@ -1,4 +1,11 @@
-.PHONY: lint scan scan_csv bootstrap_awx
+.PHONY: all clean lint scan scan_csv bootstrap_awx syntax-check test
+
+all: lint syntax-check
+
+test: lint syntax-check
+
+clean:
+	rm -f reports/*.json reports/*.md *.retry
 
 lint:
 	@if [ "${SKIP_GALAXY_INSTALL}" != "1" ]; then \
@@ -18,6 +25,10 @@ scan:
 
 scan_csv:
 	ansible-playbook playbooks/sbm_scan_from_csv.yml -e csv_path=data/sbms.csv
+
+syntax-check:
+	ansible-playbook playbooks/sbm_scan.yml -i inventories/sbms.yml --syntax-check
+	ansible-playbook playbooks/sbm_scan_from_csv.yml -e csv_path=data/sbms.csv --syntax-check
 
 bootstrap_awx:
 	ansible-galaxy collection install -r requirements.yml
