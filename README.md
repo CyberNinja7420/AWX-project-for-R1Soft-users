@@ -74,6 +74,10 @@ make lint            # lint only
 make syntax-check    # Ansible syntax checks
 make test            # lint + syntax-check (alias: make all)
 make clean           # delete generated reports and .retry files
+GitHub Actions runs `make lint` (yamllint + ansible-lint) followed by `make syntax-check` (Ansible syntax-check for inventory and CSV scan playbooks). Locally:
+```bash
+make lint
+make syntax-check
 ```
 
 The repository ships `ansible.cfg` with YAML callbacks, disabled SSH host-key prompts (for labs), retry files disabled, and a `.g

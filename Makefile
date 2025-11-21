@@ -6,6 +6,7 @@ test: lint syntax-check
 
 clean:
 	rm -f reports/*.json reports/*.md *.retry
+.PHONY: lint scan scan_csv bootstrap_awx syntax-check
 
 lint:
 	@if [ "${SKIP_GALAXY_INSTALL}" != "1" ]; then \
