@@ -5,14 +5,27 @@ on:
 jobs:
   lint:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
       - name: Setup Python
         uses: actions/setup-python@v5
-        with: { python-version: '3.11' }
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      - name: Cache Ansible collections
+        uses: actions/cache@v4
+        with:
+          path: ~/.ansible/collections
+          key: ${{ runner.os }}-ansible-collections-${{ hashFiles('requirements.yml') }}
+          restore-keys: |
+            ${{ runner.os }}-ansible-collections-
       - name: Install Ansible + linters
         run: |
           pip install -r requirements.txt
           ansible-galaxy collection install -r requirements.yml
       - name: Lint
+        env:
+          SKIP_GALAXY_INSTALL: '1'
         run: make lint
